@@ -21,3 +21,5 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+/app/Services/elastalert2
+/app/Services/elastalert2/venv
