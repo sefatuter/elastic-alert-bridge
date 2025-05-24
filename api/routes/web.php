@@ -9,6 +9,8 @@ Route::get('/', function () {
 });
 
 Route::get('/logs', [LogController::class, 'index']);
+Route::get('/logs/indices', [LogController::class, 'showIndices'])->name('logs.indices');
+Route::get('/logs/search', [LogController::class, 'searchIndex'])->name('logs.search');
 
 Route::get('/elastalert-rules', [ElastAlertRulesController::class, 'index'])->name('elastalert_rules.index');
 Route::get('/elastalert-rules/create', [ElastAlertRulesController::class, 'create'])->name('elastalert_rules.create');

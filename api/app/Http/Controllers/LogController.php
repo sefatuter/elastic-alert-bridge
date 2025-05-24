@@ -5,9 +5,17 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use App\Services\ElasticsearchService;
 
 class LogController extends Controller
 {
+    private $elasticsearchService;
+
+    public function __construct(ElasticsearchService $elasticsearchService)
+    {
+        $this->elasticsearchService = $elasticsearchService;
+    }
+
     public function index()
     {
         try {
@@ -66,5 +74,45 @@ class LogController extends Controller
                 'error' => 'An error occurred while fetching logs: ' . $e->getMessage()
             ]);
         }
+    }
+
+    /**
+     * Show indices explorer page
+     */
+    public function showIndices()
+    {
+        $indices = $this->elasticsearchService->getAllIndices();
+        return view('logs.indices', compact('indices'));
+    }
+
+    /**
+     * Search within a specific index
+     */
+    public function searchIndex(Request $request)
+    {
+        $indexName = $request->input('index');
+        $searchQuery = $request->input('search', '');
+        $page = (int) $request->input('page', 1);
+        $size = 50;
+        $from = ($page - 1) * $size;
+
+        if (!$indexName) {
+            return redirect()->route('logs.indices')->with('error', 'Please select an index');
+        }
+
+        $result = $this->elasticsearchService->searchInIndex($indexName, $searchQuery, $size, $from);
+        
+        $totalPages = ceil($result['total'] / $size);
+
+        return view('logs.search', [
+            'logs' => $result['hits'],
+            'error' => $result['error'],
+            'index' => $indexName,
+            'searchQuery' => $searchQuery,
+            'total' => $result['total'],
+            'currentPage' => $page,
+            'totalPages' => $totalPages,
+            'hasMore' => $page < $totalPages
+        ]);
     }
 } 

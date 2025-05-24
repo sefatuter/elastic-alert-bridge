@@ -128,6 +128,10 @@
                 background: linear-gradient(135deg, #4a90e2, #357abd);
             }
             
+            .card-icon.indices {
+                background: linear-gradient(135deg, #722ed1, #531dab);
+            }
+            
             .card-title {
                 font-size: 1.5rem;
                 font-weight: 600;
@@ -299,6 +303,22 @@
                         <a href="/logs" class="card-button green">
                             <i class="fas fa-eye"></i>
                             View Logs
+                        </a>
+                    </div>
+
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <div class="card-icon indices">
+                                <i class="fas fa-database"></i>
+                            </div>
+                            <div>
+                                <div class="card-title">Elasticsearch Indices</div>
+                                <div class="card-description">Browse all available Elasticsearch indices, search through documents, and analyze your data.</div>
+                            </div>
+                        </div>
+                        <a href="/logs/indices" class="card-button">
+                            <i class="fas fa-search"></i>
+                            Browse Indices
                         </a>
                     </div>
 
