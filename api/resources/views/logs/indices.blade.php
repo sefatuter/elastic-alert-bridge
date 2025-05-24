@@ -222,6 +222,54 @@
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
+
+        .filter-section {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .filter-input {
+            width: 100%;
+            max-width: 400px;
+            padding: 12px 40px 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .filter-input:focus {
+            outline: none;
+            border-color: #4a90e2;
+            box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+        }
+
+        .filter-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .filter-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #a0aec0;
+            font-size: 1rem;
+        }
+
+        .filter-label {
+            display: block;
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 8px;
+        }
     </style>
 </head>
 <body>
@@ -256,6 +304,14 @@
                     <span>Found {{ count($indices) }} indices</span>
                 </div>
                 
+                <div class="filter-section">
+                    <label for="filter-input" class="filter-label">Filter by index name:</label>
+                    <div class="filter-wrapper">
+                        <input type="text" id="filter-input" class="filter-input" placeholder="Enter index name">
+                        <i class="fas fa-search filter-icon"></i>
+                    </div>
+                </div>
+                
                 <div class="indices-grid">
                     @foreach($indices as $index)
                         <div class="index-card">
@@ -284,5 +340,26 @@
             @endif
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const filterInput = document.getElementById('filter-input');
+            const indexCards = document.querySelectorAll('.index-card');
+            
+            filterInput.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase().trim();
+                
+                indexCards.forEach(function(card) {
+                    const indexName = card.querySelector('.index-name').textContent.toLowerCase();
+                    
+                    if (searchTerm === '' || indexName.includes(searchTerm)) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 </html> 
