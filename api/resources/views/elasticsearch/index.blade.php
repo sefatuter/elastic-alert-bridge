@@ -89,6 +89,10 @@
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'%3E%3Cpath d='M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z'/%3E%3C/svg%3E"); 
         }
 
+        .icon-rules { /* Basic icon for Rules button */
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffffff'%3E%3Cpath d='M3 13H11V11H3M3 6V8H21V6M3 18V16H21V18Z'/%3E%3C/svg%3E");
+        }
+
         .kibana-header {
             background: #ffffff;
             border-bottom: 1px solid #d3dae6;
@@ -252,53 +256,45 @@
             border-radius: 6px;
             padding: 9px 12px;
             font-size: 14px;
-            font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s ease;
             display: flex;
             align-items: center;
             gap: 8px;
+            font-weight: 500;
             height: 36px;
-            white-space: nowrap;
+            transition: all 0.2s ease;
         }
 
         .refresh-btn:hover {
-            background: #f7f9fb;
-            border-color: #006bb4;
-            box-shadow: 0 1px 3px rgba(0, 107, 180, 0.2);
+            background-color: #f0f2f5;
+            border-color: #98a2b3;
         }
-
-        .refresh-btn:active {
-            background: #e7f3ff;
-        }
-
-        .create-alerts-btn {
+        
+        .action-btn {
             background: #006bb4;
-            color: white;
-            border: none;
+            color: #ffffff;
+            border: 1px solid #006bb4;
             border-radius: 6px;
-            padding: 10px 16px;
+            padding: 0 16px; /* Adjusted padding for icon and text */
             font-size: 14px;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
+            display: inline-flex; /* Use inline-flex for icon alignment */
             align-items: center;
-            gap: 8px;
-            box-shadow: 0 1px 3px rgba(0, 107, 180, 0.3);
+            gap: 8px; /* Space between icon and text */
             height: 36px;
-            white-space: nowrap;
+            transition: all 0.2s ease;
+            text-decoration: none; /* For <a> tag */
         }
 
-        .create-alerts-btn:hover {
+        .action-btn:hover {
             background: #005a9e;
-            box-shadow: 0 2px 6px rgba(0, 107, 180, 0.4);
-            transform: translateY(-1px);
+            border-color: #005a9e;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        .create-alerts-btn:active {
-            transform: translateY(0);
-            box-shadow: 0 1px 3px rgba(0, 107, 180, 0.3);
+        .action-btn .icon {
+            filter: brightness(0) invert(1); /* Ensures icon is white if it's not already */
         }
 
         .main-container {
@@ -732,10 +728,14 @@
             </div>
         </div>
         <div class="header-right">
-            <button class="create-alerts-btn" onclick="openCreateAlert()">
+            <a href="{{ route('elasticsearch.create-alert') }}" class="action-btn">
                 <span class="icon icon-add"></span>
                 Create Alert
-            </button>
+            </a>
+            <a href="{{ route('elasticsearch.rules') }}" class="action-btn"> 
+                <span class="icon icon-rules"></span>
+                Rules
+            </a>
             <div class="time-picker">
                 <span class="icon icon-calendar"></span>
                 <span>Last 15 minutes</span>

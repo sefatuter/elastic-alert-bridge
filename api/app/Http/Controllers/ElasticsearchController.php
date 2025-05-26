@@ -151,12 +151,48 @@ class ElasticsearchController extends Controller
             'smtp_password' => $request->get('smtpPassword', '')
         ];
 
+        // Create smtp_auth_file.txt if email action is enabled and credentials are provided
+        $rulesPath = '/home/sefaubuntu/elastic-alert-bridge/api/app/Services/elastalert2/rules';
+        $smtpAuthFilePath = $rulesPath . DIRECTORY_SEPARATOR . 'smtp_auth_file.txt';
+        $fileCreationMessage = null;
+
+        if ($formData['enable_email_action']) {
+            if (!empty($formData['smtp_username']) && !empty($formData['smtp_password'])) {
+                $smtpAuthContent = "user: " . $formData['smtp_username'] . "\n";
+                $smtpAuthContent .= "password: " . $formData['smtp_password'] . "\n";
+                
+                try {
+                    if (!is_dir($rulesPath)) {
+                        // mkdir($rulesPath, 0755, true);
+                    }
+                    file_put_contents($smtpAuthFilePath, $smtpAuthContent);
+                    $fileCreationMessage = 'smtp_auth_file.txt created/updated successfully.';
+                } catch (\Exception $e) {
+                    $fileCreationMessage = 'Error creating smtp_auth_file.txt: ' . $e->getMessage();
+                }
+            }
+        }
+
         // Return success response
-        return response()->json([
+        $responsePayload = [
             'success' => true,
             'message' => 'Alert rule generated successfully!',
-            'received_data' => $formData // Optionally return received data for debugging
-        ]);
+            'received_data' => $formData 
+        ];
+
+        if ($formData['enable_email_action']) {
+            $responsePayload['smtp_auth_file_path'] = $smtpAuthFilePath;
+            if ($fileCreationMessage) {
+                $responsePayload['smtp_auth_file_status'] = $fileCreationMessage;
+            }
+        } else {
+             // If email action is not enabled, but we had a message (e.g. error from previous attempt if logic was different)
+            if ($fileCreationMessage) {
+                $responsePayload['smtp_auth_file_status'] = $fileCreationMessage; 
+            }
+        }
+
+        return response()->json($responsePayload);
     }
 
     public function printRule(Request $request)
@@ -188,10 +224,71 @@ class ElasticsearchController extends Controller
             $output .= "From Address: " . ($request->get('fromAddress', '') ?: 'N/A') . "\n";
             $output .= "SMTP Username: " . ($request->get('smtpUsername', '') ?: 'N/A') . "\n";
             $output .= "SMTP Password: " . ($request->get('smtpPassword') ? '[SET]' : 'N/A') . "\n"; // Avoid printing password directly
+            
+            // Add smtp_auth_file path
+            $rulesPath = '/home/sefaubuntu/elastic-alert-bridge/api/app/Services/elastalert2/rules';
+            $smtpAuthFilePath = $rulesPath . DIRECTORY_SEPARATOR . 'smtp_auth_file.txt';
+            $output .= "SMTP Auth File: " . $smtpAuthFilePath . "\n";
         }
 
         $output .= "=================================";
 
         return response($output, 200)->header('Content-Type', 'text/plain');
+    }
+
+    public function showRulesPage()
+    {
+        // Logic to list rule files will be added here later
+        $rulesPath = '/home/sefaubuntu/elastic-alert-bridge/api/app/Services/elastalert2/rules';
+        $ruleFiles = [];
+        // Example: $ruleFiles = array_diff(scandir($rulesPath), array('.', '..')); 
+        // We will implement robust file listing in the next step.
+
+        return view('elasticsearch.rules', ['ruleFiles' => $ruleFiles, 'rulesPath' => $rulesPath]);
+    }
+
+    public function listRuleFiles()
+    {
+        $rulesPath = '/home/sefaubuntu/elastic-alert-bridge/api/app/Services/elastalert2/rules';
+        try {
+            if (!is_dir($rulesPath) || !is_readable($rulesPath)) {
+                return response()->json(['error' => 'Rules directory is not accessible.', 'path' => $rulesPath], 500);
+            }
+            $files = scandir($rulesPath);
+            $yamlFiles = array_filter($files, function($file) {
+                return pathinfo($file, PATHINFO_EXTENSION) === 'yaml' || pathinfo($file, PATHINFO_EXTENSION) === 'yml';
+            });
+            return response()->json(array_values($yamlFiles)); // Return as a simple array of names
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to list rule files: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function getRuleFileContent(Request $request)
+    {
+        $rulesPath = '/home/sefaubuntu/elastic-alert-bridge/api/app/Services/elastalert2/rules';
+        $fileName = $request->get('file');
+
+        if (!$fileName) {
+            return response()->json(['error' => 'File name parameter is required.'], 400);
+        }
+
+        // Basic sanitation to prevent directory traversal
+        $fileName = basename($fileName);
+        $filePath = $rulesPath . DIRECTORY_SEPARATOR . $fileName;
+
+        if (pathinfo($filePath, PATHINFO_EXTENSION) !== 'yaml' && pathinfo($filePath, PATHINFO_EXTENSION) !== 'yml') {
+            return response()->json(['error' => 'Invalid file type. Only YAML files are allowed.'], 400);
+        }
+
+        try {
+            if (!file_exists($filePath) || !is_readable($filePath)) {
+                return response()->json(['error' => 'Rule file not found or not readable.', 'path' => $filePath], 404);
+            }
+            $content = file_get_contents($filePath);
+            return response($content, 200)->header('Content-Type', 'text/plain'); // Send as plain text
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to read rule file: ' . $e->getMessage(), 'path' => $filePath], 500);
+        }
     }
 } 
