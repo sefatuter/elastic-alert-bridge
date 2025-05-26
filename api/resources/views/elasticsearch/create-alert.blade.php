@@ -555,16 +555,17 @@
         function generateRule() {
             console.log('Generate rule button clicked');
             
+            if (!validateForm()) {
+                return;
+            }
+
             // Get form data
             const indexSelect = document.getElementById('indexSelect');
-            const selectedOption = indexSelect.options[indexSelect.selectedIndex];
-            const backingIndex = selectedOption.dataset.backingIndex || indexSelect.value; // Fallback to value if data attribute not present
 
             const formData = {
                 ruleName: document.getElementById('ruleName').value.trim(),
-                index: indexSelect.value,
-                backingIndex: backingIndex,
-                prompt: document.getElementById('alertPrompt').value.trim(),
+                index: indexSelect.value, // Display name
+                prompt: document.getElementById('alertPrompt').value.trim(), 
                 kql: document.getElementById('kqlSyntax').value.trim(),
                 interval: document.getElementById('scheduleInterval').value,
                 unit: document.getElementById('scheduleUnit').value
@@ -580,42 +581,47 @@
                 formData.smtpSsl = document.getElementById('smtpSsl').checked;
                 formData.fromAddress = document.getElementById('fromAddress').value.trim();
                 formData.smtpUsername = document.getElementById('smtpUsername').value.trim();
-                formData.smtpPassword = document.getElementById('smtpPassword').value; // Password not trimmed
+                formData.smtpPassword = document.getElementById('smtpPassword').value; 
             }
             
-            console.log('Form data:', formData);
+            console.log('Form data for generateRule (POST request):', formData);
             
-            // Show loading state
-            const generateBtn = document.querySelector('.btn-primary');
+            const generateBtn = document.querySelector('button[onclick="generateRule()"]'); // More specific selector
             const originalText = generateBtn.textContent;
             generateBtn.textContent = 'Generating...';
             generateBtn.disabled = true;
             
-            // Build query string
-            const params = new URLSearchParams(formData);
-            const url = '/elasticsearch/generate-rule?' + params.toString();
-            
-            console.log('Making request to:', url);
-            
-            // Make simple GET request
-            fetch(url)
-                .then(response => {
-                    console.log('Response status:', response.status);
-                    return response.json();
-                })
-                .then(result => {
-                    console.log('Response data:', result);
-                    alert('Success! Check your terminal/console for the printed output.');
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Error occurred. Check console for details.');
-                })
-                .finally(() => {
-                    // Reset button state
-                    generateBtn.textContent = originalText;
-                    generateBtn.disabled = false;
-                });
+            // Changed to POST request with JSON body
+            fetch('/elasticsearch/generate-rule', { // URL directly used, ensure it matches route
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.json();
+            })
+            .then(result => {
+                console.log('Response data:', result);
+                if (result.success && result.redirect_url) {
+                    alert('Success! ' + (result.message || 'Rule generated. Redirecting to rules page...'));
+                    window.location.href = result.redirect_url;
+                } else {
+                    alert('Error: ' + (result.error || 'An unknown error occurred.'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error occurred. Check console for details.');
+            })
+            .finally(() => {
+                // Reset button state
+                generateBtn.textContent = originalText;
+                generateBtn.disabled = false;
+            });
         }
 
         // Form submission handler

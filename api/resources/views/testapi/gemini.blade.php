@@ -90,7 +90,7 @@
         <form id="geminiForm">
             <div>
                 <label for="apiKey">API Key (Test Only - Remove for Production)</label>
-                <input type="text" id="apiKeyInput" placeholder="Enter your API Key (used by controller for this test)" value="AIzaSyCqwjKlZk0dbRVH2O2T2lvYXe-yd6U1Tlk" readonly>
+                <input type="text" id="apiKeyInput" placeholder="Enter your API Key (used by controller for this test)" value="" readonly>
                 <p style="font-size:0.8em; color: #7f8c8d; margin-top:-10px; margin-bottom:20px;">Note: For this demo, the controller uses a hardcoded key. This input is illustrative.</p>
             </div>
 

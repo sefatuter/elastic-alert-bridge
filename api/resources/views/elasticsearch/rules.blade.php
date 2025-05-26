@@ -143,26 +143,46 @@
             let currentSelectedFileElement = null;
 
             async function loadRuleFiles() {
+                rulesListUl.innerHTML = '<li class="no-rule-selected" style="text-align:left; padding:10px 0;">Loading rules...</li>'; // Set loading message upfront
+
                 try {
                     const response = await fetch('{{ route("api.elasticsearch.rules.list") }}');
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    const files = await response.json();
                     
-                    rulesListUl.innerHTML = ''; // Clear loading/error message
+                    let filesData;
+                    // Try to parse JSON regardless of response.ok, as error responses from our controller are JSON
+                    try {
+                        filesData = await response.json();
+                    } catch (jsonError) {
+                        console.error('JSON parsing error:', jsonError);
+                        const responseText = await response.text().catch(() => 'Could not read response text.'); 
+                        throw new Error(`Failed to parse server response. Status: ${response.status}. Server sent: ${responseText.substring(0,200)}...`);
+                    }
 
-                    if (files.error) {
-                        rulesListUl.innerHTML = `<li class="no-rule-selected" style="color:red; text-align:left; padding:10px 0;">Error: ${files.error}</li>`;
+                    if (!response.ok) {
+                        let errorMsg = filesData.error || `HTTP error! Status: ${response.status}`;
+                        if (filesData.path) {
+                            errorMsg += ` (Path: ${filesData.path})`;
+                        }
+                        throw new Error(errorMsg);
+                    }
+                    
+                    rulesListUl.innerHTML = ''; // Clear loading message
+
+                    // filesData should now be the actual array of filenames or an object with an error key handled by the !response.ok block above
+                    if (!Array.isArray(filesData)) {
+                        // This case should ideally be caught by !response.ok if the controller sends an error object.
+                        // But as a fallback if filesData is an object without an error key from a 200 OK response.
+                        console.error('Expected an array of files, but received:', filesData);
+                        rulesListUl.innerHTML = `<li class="no-rule-selected" style="color:red; text-align:left; padding:10px 0;">Error: Received invalid data format from server.</li>`;
                         return;
                     }
 
-                    if (files.length === 0) {
-                        rulesListUl.innerHTML = '<li class="no-rule-selected" style="text-align:left; padding:10px 0;">No rule files found.</li>';
+                    if (filesData.length === 0) {
+                        rulesListUl.innerHTML = '<li class="no-rule-selected" style="text-align:left; padding:10px 0;">No rule files found in the directory.</li>';
                         return;
                     }
 
-                    files.forEach(fileName => {
+                    filesData.forEach(fileName => {
                         const listItem = document.createElement('li');
                         listItem.classList.add('rules-list-item');
                         const link = document.createElement('a');
@@ -176,14 +196,41 @@
                         listItem.appendChild(link);
                         rulesListUl.appendChild(listItem);
                     });
-                } catch (error) {
-                    console.error('Failed to load rule files:', error);
-                    rulesListUl.innerHTML = `<li class="no-rule-selected" style="color:red; text-align:left; padding:10px 0;">Failed to load rules. Check console.</li>`;
+
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const selectedFileFromUrl = urlParams.get('selected_file');
+                    if (selectedFileFromUrl) {
+                        const linkToSelect = rulesListUl.querySelector(`a[data-file-name="${selectedFileFromUrl}"]`);
+                        if (linkToSelect) {
+                            await loadRuleContent(selectedFileFromUrl, linkToSelect);
+                        } else {
+                            console.warn(`Selected file '${selectedFileFromUrl}' from URL not found in the list.`);
+                        }
+                    }
+
+                } catch (error) { 
+                    console.error('Failed to load rule files (outer catch):', error);
+                    rulesListUl.innerHTML = `<li class="no-rule-selected" style="color:red; text-align:left; padding:10px 0;">Failed to load rules: ${error.message}. Check console.</li>`;
                 }
             }
 
             async function loadRuleContent(fileName, linkElement) {
-                ruleContentDisplayPre.textContent = 'Loading content...';
+                let displayElement = ruleContentDisplayPre;
+                if (!displayElement) { 
+                    const contentArea = document.querySelector('.rules-content-area');
+                    if (contentArea) {
+                        displayElement = document.createElement('pre'); // Ensure it's a pre for consistency
+                        displayElement.id = 'ruleContentDisplay'; // Give it the id if creating
+                        contentArea.innerHTML = ''; 
+                        contentArea.appendChild(displayElement);
+                    } else {
+                        console.error('.rules-content-area not found!');
+                        alert('Error: Content display area not found.');
+                        return;
+                    }
+                }
+                displayElement.textContent = 'Loading content...';
+                
                 if (currentSelectedFileElement) {
                     currentSelectedFileElement.classList.remove('selected');
                 }
@@ -197,16 +244,15 @@
                         throw new Error(`HTTP error! status: ${response.status}. ${errorData.error || 'Failed to fetch content.'}`);
                     }
                     const content = await response.text();
-                    ruleContentDisplayPre.textContent = content;
+                    displayElement.textContent = content;
                 } catch (error) {
                     console.error(`Failed to load content for ${fileName}:`, error);
-                    ruleContentDisplayPre.textContent = `Error loading ${fileName}:\n${error.message}`;
-                    alert(`Failed to load rule content for ${fileName}. See console for details.`);
+                    displayElement.textContent = `Error loading ${fileName}:\n${error.message}`
                 }
             }
 
-            loadRuleFiles(); // Initial load
+            loadRuleFiles();
         });
     </script>
 </body>
-</html> 
+</html>

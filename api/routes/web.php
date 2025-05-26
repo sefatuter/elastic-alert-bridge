@@ -12,7 +12,7 @@ Route::get('/', function () {
 
 Route::get('/elasticsearch', [ElasticsearchController::class, 'index'])->name('elasticsearch.index');
 Route::get('/elasticsearch/create-alert', [ElasticsearchController::class, 'createAlert'])->name('elasticsearch.create-alert');
-Route::get('/elasticsearch/generate-rule', [ElasticsearchController::class, 'generateRule'])->name('elasticsearch.generate-rule');
+Route::post('/elasticsearch/generate-rule', [ElasticsearchController::class, 'generateRule'])->name('elasticsearch.generate-rule');
 Route::get('/api/elasticsearch/indexes', [ElasticsearchController::class, 'getIndexes'])->name('elasticsearch.indexes');
 Route::get('/api/elasticsearch/data', [ElasticsearchController::class, 'getIndexData'])->name('elasticsearch.data');
 Route::get('/elasticsearch/rules', [ElasticsearchController::class, 'showRulesPage'])->name('elasticsearch.rules');
