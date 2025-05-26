@@ -200,7 +200,7 @@ class ElasticsearchController extends Controller
         $outputData = [
             'Rule Name' => $request->get('ruleName', ''),
             'Elasticsearch Index (Display)' => $request->get('index', ''),
-            'Elasticsearch Index (Backing)' => $request->get('backingIndex', ''),
+            // 'Elasticsearch Index (Backing)' => $request->get('backingIndex', ''),
             'Alert Requirements' => $request->get('prompt', ''),
             'KQL Syntax' => $request->get('kql', ''),
             'Schedule Interval' => $request->get('interval', ''),
@@ -222,8 +222,6 @@ class ElasticsearchController extends Controller
             $output .= "SMTP Port: " . ($request->get('smtpPort', '') ?: 'N/A') . "\n";
             $output .= "SMTP SSL: " . ($request->boolean('smtpSsl') ? 'Yes' : 'No') . "\n";
             $output .= "From Address: " . ($request->get('fromAddress', '') ?: 'N/A') . "\n";
-            $output .= "SMTP Username: " . ($request->get('smtpUsername', '') ?: 'N/A') . "\n";
-            $output .= "SMTP Password: " . ($request->get('smtpPassword') ? '[SET]' : 'N/A') . "\n"; // Avoid printing password directly
             
             // Add smtp_auth_file path
             $rulesPath = '/home/sefaubuntu/elastic-alert-bridge/api/app/Services/elastalert2/rules';
