@@ -138,19 +138,30 @@ class ElasticsearchController extends Controller
             'kql_syntax' => $request->get('kql', ''),
             'schedule_interval' => $request->get('interval', ''),
             'schedule_unit' => $request->get('unit', ''),
-            'submitted_at' => now()->toDateTimeString()
+            'submitted_at' => now()->toDateTimeString(),
+            
+            // Email action fields
+            'enable_email_action' => $request->boolean('enableEmailAction'),
+            'email_recipient' => $request->get('emailRecipient', ''),
+            'smtp_host' => $request->get('smtpHost', ''),
+            'smtp_port' => $request->get('smtpPort', ''),
+            'smtp_ssl' => $request->boolean('smtpSsl'),
+            'from_address' => $request->get('fromAddress', ''),
+            'smtp_username' => $request->get('smtpUsername', ''),
+            'smtp_password' => $request->get('smtpPassword', '')
         ];
-        
+
         // Return success response
         return response()->json([
             'success' => true,
-            'message' => 'Alert rule generated successfully!'
+            'message' => 'Alert rule generated successfully!',
+            'received_data' => $formData // Optionally return received data for debugging
         ]);
     }
 
     public function printRule(Request $request)
     {
-        $formData = [
+        $outputData = [
             'Rule Name' => $request->get('ruleName', ''),
             'Elasticsearch Index (Display)' => $request->get('index', ''),
             'Elasticsearch Index (Backing)' => $request->get('backingIndex', ''),
@@ -161,14 +172,24 @@ class ElasticsearchController extends Controller
         ];
 
         $output = "======== FORM DATA PREVIEW ========\n";
-        foreach ($formData as $key => $value) {
+        foreach ($outputData as $key => $value) {
             if ($key === 'KQL Syntax' && empty($value)) {
-                // Optionally skip empty KQL or show as 'N/A'
-                // $output .= $key . ": N/A\n"; 
                 continue;
             }
             $output .= $key . ": " . ($value ?: 'N/A') . "\n";
         }
+
+        if ($request->boolean('enableEmailAction')) {
+            $output .= "\n-------- EMAIL ACTIONS --------\n";
+            $output .= "Recipient Email(s): " . ($request->get('emailRecipient', '') ?: 'N/A') . "\n";
+            $output .= "SMTP Host: " . ($request->get('smtpHost', '') ?: 'N/A') . "\n";
+            $output .= "SMTP Port: " . ($request->get('smtpPort', '') ?: 'N/A') . "\n";
+            $output .= "SMTP SSL: " . ($request->boolean('smtpSsl') ? 'Yes' : 'No') . "\n";
+            $output .= "From Address: " . ($request->get('fromAddress', '') ?: 'N/A') . "\n";
+            $output .= "SMTP Username: " . ($request->get('smtpUsername', '') ?: 'N/A') . "\n";
+            $output .= "SMTP Password: " . ($request->get('smtpPassword') ? '[SET]' : 'N/A') . "\n"; // Avoid printing password directly
+        }
+
         $output .= "=================================";
 
         return response($output, 200)->header('Content-Type', 'text/plain');

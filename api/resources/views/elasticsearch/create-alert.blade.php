@@ -397,6 +397,61 @@
             </div>
         </div>
 
+        <!-- Actions Section -->
+        <div class="form-section">
+            <h2 class="section-title">Actions</h2>
+            <div class="form-description" style="margin-bottom: 20px;">
+                Configure actions to be performed when an alert is triggered.
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" style="display: flex; align-items: center;">
+                    <input type="checkbox" id="enableEmailAction" onchange="toggleEmailActionFields()" style="margin-right: 10px; width: 16px; height: 16px;">
+                    Send Email Notification
+                </label>
+            </div>
+
+            <div id="emailActionFields" style="display: none; padding-left: 26px; border-left: 2px solid #f0f2f5; margin-top: 20px;">
+                <div class="form-group">
+                    <label class="form-label" for="emailRecipient">Recipient Email(s)</label>
+                    <div class="form-description">Enter one or more email addresses, separated by commas.</div>
+                    <input type="email" id="emailRecipient" class="form-input" placeholder="e.g., user1@example.com, user2@example.com">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="smtpHost">SMTP Host</label>
+                    <input type="text" id="smtpHost" class="form-input" placeholder="e.g., smtp.gmail.com">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="smtpPort">SMTP Port</label>
+                    <input type="number" id="smtpPort" class="form-input" placeholder="e.g., 465 or 587">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" style="display: flex; align-items: center;">
+                        <input type="checkbox" id="smtpSsl" style="margin-right: 10px; width: 16px; height: 16px;" checked>
+                        Use SSL for SMTP
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="fromAddress">From Address</label>
+                    <input type="email" id="fromAddress" class="form-input" placeholder="e.g., alerts@yourdomain.com">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="smtpUsername">SMTP Username (Email)</label>
+                    <input type="email" id="smtpUsername" class="form-input" placeholder="Usually your email address">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="smtpPassword">SMTP Password</label>
+                    <input type="password" id="smtpPassword" class="form-input">
+                </div>
+            </div>
+        </div>
+
         <!-- Action Buttons -->
         <div class="action-buttons">
             <button type="button" class="btn btn-secondary" onclick="goBack()">
@@ -507,13 +562,26 @@
 
             const formData = {
                 ruleName: document.getElementById('ruleName').value.trim(),
-                index: indexSelect.value, // This will be the display name for data streams
-                backingIndex: backingIndex, // This will be the actual backing index name
+                index: indexSelect.value,
+                backingIndex: backingIndex,
                 prompt: document.getElementById('alertPrompt').value.trim(),
                 kql: document.getElementById('kqlSyntax').value.trim(),
                 interval: document.getElementById('scheduleInterval').value,
                 unit: document.getElementById('scheduleUnit').value
             };
+
+            // Add email action data if enabled
+            const enableEmailAction = document.getElementById('enableEmailAction').checked;
+            formData.enableEmailAction = enableEmailAction;
+            if (enableEmailAction) {
+                formData.emailRecipient = document.getElementById('emailRecipient').value.trim();
+                formData.smtpHost = document.getElementById('smtpHost').value.trim();
+                formData.smtpPort = document.getElementById('smtpPort').value;
+                formData.smtpSsl = document.getElementById('smtpSsl').checked;
+                formData.fromAddress = document.getElementById('fromAddress').value.trim();
+                formData.smtpUsername = document.getElementById('smtpUsername').value.trim();
+                formData.smtpPassword = document.getElementById('smtpPassword').value; // Password not trimmed
+            }
             
             console.log('Form data:', formData);
             
@@ -592,6 +660,19 @@
                 interval: document.getElementById('scheduleInterval').value,
                 unit: document.getElementById('scheduleUnit').value
             };
+
+            // Add email action data if enabled
+            const enableEmailAction = document.getElementById('enableEmailAction').checked;
+            formData.enableEmailAction = enableEmailAction;
+            if (enableEmailAction) {
+                formData.emailRecipient = document.getElementById('emailRecipient').value.trim();
+                formData.smtpHost = document.getElementById('smtpHost').value.trim();
+                formData.smtpPort = document.getElementById('smtpPort').value;
+                formData.smtpSsl = document.getElementById('smtpSsl').checked;
+                formData.fromAddress = document.getElementById('fromAddress').value.trim();
+                formData.smtpUsername = document.getElementById('smtpUsername').value.trim();
+                formData.smtpPassword = document.getElementById('smtpPassword').value; // Password not trimmed
+            }
             
             console.log('Form data for print:', formData);
             
@@ -632,6 +713,17 @@
         document.addEventListener('DOMContentLoaded', function() {
             loadIndexes();
         });
+
+        // Toggle Email Action Fields visibility
+        function toggleEmailActionFields() {
+            const emailFieldsDiv = document.getElementById('emailActionFields');
+            const enableCheckbox = document.getElementById('enableEmailAction');
+            if (enableCheckbox.checked) {
+                emailFieldsDiv.style.display = 'block';
+            } else {
+                emailFieldsDiv.style.display = 'none';
+            }
+        }
     </script>
 </body>
 </html> 
