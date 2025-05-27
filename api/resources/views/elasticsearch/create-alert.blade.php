@@ -18,55 +18,51 @@
             color: #343741;
             font-size: 14px;
             line-height: 1.5;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        .alert-header {
+            background: #ffffff;
+            border-bottom: 1px solid #d3dae6;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .alert-title {
+            font-size: 20px;
+            font-weight: 500;
+            margin-left: 16px;
+        }
+        .back-button {
+            background: #006bb4;
+            color: #ffffff;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .back-button:hover {
+            background: #005a9e;
         }
 
         .container {
             max-width: 900px;
             margin: 0 auto;
             padding: 32px 24px;
+            flex-grow: 1;
+            overflow-y: auto;
         }
 
-        .header {
-            margin-bottom: 40px;
-        }
-
-        .breadcrumb {
-            display: inline-flex;
-            align-items: center;
-            font-size: 14px;
-            color: #006bb4;
-            margin-bottom: 20px;
-            cursor: pointer;
-            font-weight: 500;
-            padding: 8px 12px;
-            border-radius: 6px;
-            transition: all 0.2s ease;
-            background: transparent;
-            border: 1px solid transparent;
-        }
-
-        .breadcrumb:hover {
-            background: #f7f9fb;
-            border-color: #d3dae6;
-            text-decoration: none;
-        }
-
-        .breadcrumb:active {
-            background: #e7f3ff;
-        }
-
-        .page-title {
-            font-size: 28px;
-            font-weight: 400;
-            color: #343741;
-            margin-bottom: 8px;
-        }
-
-        .page-subtitle {
-            font-size: 16px;
-            color: #69707d;
-            margin-bottom: 32px;
-        }
 
         .form-section {
             background: #ffffff;
@@ -287,16 +283,14 @@
     </style>
 </head>
 <body>
+    <div class="alert-header">
+        <a href="{{ route('elasticsearch.index') }}" class="back-button">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z"/></svg>
+            Back
+        </a>
+        <h1 class="alert-title">Create ElastAlert Rule</h1>
+    </div>
     <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <div class="breadcrumb" onclick="goBack()">
-                <span class="icon icon-arrow-left"></span>
-                Return
-            </div>
-            <h1 class="page-title">Create ElastAlert Rule</h1>
-            <p class="page-subtitle">Generate intelligent alerts using AI-powered rule creation</p>
-        </div>
 
         <!-- Main Form -->
         <div class="form-section">

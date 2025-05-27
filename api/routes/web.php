@@ -7,6 +7,7 @@ use App\Http\Controllers\ElasticsearchController;
 use App\Http\Controllers\TestApiController;
 use App\Http\Controllers\AIController;
 use App\Http\Controllers\IndexController;
+use App\Http\Controllers\IntegrationsController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -25,6 +26,13 @@ Route::get('/api/elasticsearch/data', [IndexController::class, 'getIndexData'])-
 Route::get('/elasticsearch/rules', [ElasticsearchController::class, 'showRulesPage'])->name('elasticsearch.rules');
 Route::get('/api/elasticsearch/rules/list', [ElasticsearchController::class, 'listRuleFiles'])->name('api.elasticsearch.rules.list');
 Route::get('/api/elasticsearch/rules/content', [ElasticsearchController::class, 'getRuleFileContent'])->name('api.elasticsearch.rules.content');
+
+// Integrations routes
+Route::get('/elasticsearch/integrations', [IntegrationsController::class, 'index'])->name('elasticsearch.integrations');
+Route::get('/api/elasticsearch/integrations', [IntegrationsController::class, 'getIntegrations'])->name('api.elasticsearch.integrations.list');
+Route::post('/api/elasticsearch/integrations/email', [IntegrationsController::class, 'saveEmailIntegration'])->name('api.elasticsearch.integrations.email.save');
+Route::delete('/api/elasticsearch/integrations/email', [IntegrationsController::class, 'deleteEmailIntegration'])->name('api.elasticsearch.integrations.email.delete');
+Route::post('/api/elasticsearch/integrations/email/test', [IntegrationsController::class, 'testEmailIntegration'])->name('api.elasticsearch.integrations.email.test');
 
 Route::get('/elasticsearch/print-rule', [ElasticsearchController::class, 'printRule'])->name('elasticsearch.print-rule');
 
