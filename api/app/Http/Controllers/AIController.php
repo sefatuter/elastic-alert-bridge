@@ -7,10 +7,31 @@ use Elastic\Elasticsearch\ClientBuilder;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use App\Models\EmailIntegration;
 
 class AIController extends Controller
 {
-    // Prepare prompt for Gemini
+    private $rulesPath = '/home/sefaubuntu/elastic-alert-bridge/config/elastalert/rules';
+    private $integrationAuthPath = '/home/sefaubuntu/elastic-alert-bridge/api/app/Services/elastalert2/rules';
+
+    private function findIntegrationAuthFile($integrationId)
+    {
+        if (!$integrationId) {
+            return null;
+        }
+        
+        // Use the integration ID as the file number for a direct mapping
+        $authFileName = "smtp_auth_file{$integrationId}.txt";
+        $authFilePath = $this->integrationAuthPath . DIRECTORY_SEPARATOR . $authFileName;
+        
+        // Check if the file exists
+        if (file_exists($authFilePath)) {
+            return $authFileName;
+        }
+        
+        return null;
+    }
+
     private function prepareEmailPrompt(array $formData): string
     {
         // Get form data
@@ -37,8 +58,15 @@ class AIController extends Controller
             $prompt .= "\nKQL Syntax (User Provided):\n{$kqlSyntax}";
         }
 
-        // Get email information if email action is enabled
-        // TODO: get email information from profile integrations
+        // Determine the correct SMTP auth file path
+        $smtpAuthFilePath = $this->rulesPath . '/smtp_auth_file.txt'; // Default for custom
+        
+        if (isset($formData['email_type']) && $formData['email_type'] === 'integration' && isset($formData['integration_id'])) {
+            $integrationAuthFile = $this->findIntegrationAuthFile($formData['integration_id']);
+            if ($integrationAuthFile) {
+                $smtpAuthFilePath = $this->integrationAuthPath . '/' . $integrationAuthFile;
+            }
+        }
 
         $prompt .= <<<YAML
 
@@ -68,7 +96,7 @@ class AIController extends Controller
         smtp_host: {$formData['smtp_host'] ?? 'smtp.example.com'}
         smtp_port: {$formData['smtp_port'] ?? '587'}
         smtp_ssl: {(($formData['smtp_ssl'] ?? false) ? 'true' : 'false')}
-        smtp_auth_file: "{$this->rulesPath}/smtp_auth_file.txt"
+        smtp_auth_file: "{$smtpAuthFilePath}"
         
         from_addr: {$formData['from_address'] ?? 'noreply@example.com'}
         
@@ -144,7 +172,7 @@ class AIController extends Controller
         SMTP SSL: {(($formData['smtp_ssl'] ?? false) ? 'Yes' : 'No')}
         From Address: {$formData['from_address'] ?? 'N/A'}
         SMTP Username: {$smtpUsername}
-        {$authNote}SMTP Auth File Path (for rule configuration): {$this->rulesPath}/smtp_auth_file.txt
+        {$authNote}SMTP Auth File Path (for rule configuration): {$smtpAuthFilePath}
         
         EMAIL;
         }
@@ -155,24 +183,52 @@ class AIController extends Controller
     //
     public function generateRule(Request $request)
     {
+        // Get basic form data
         $formData = [
             'rule_name' => $request->get('ruleName', ''),
             'elasticsearch_index' => $request->get('index', ''),
-            // 'backing_index' => $request->get('backingIndex', ''),
             'alert_prompt' => $request->get('prompt', ''),
             'kql_syntax' => $request->get('kql', ''),
             'schedule_interval' => $request->get('interval', '5'),
             'schedule_unit' => $request->get('unit', 'minutes'),
             'submitted_at' => now()->toDateTimeString(),
             'enable_email_action' => $request->boolean('enableEmailAction'),
-            'email_recipient' => $request->get('emailRecipient', ''),
-            'smtp_host' => $request->get('smtpHost', ''),
-            'smtp_port' => $request->get('smtpPort', ''),
-            'smtp_ssl' => $request->boolean('smtpSsl'),
-            'from_address' => $request->get('fromAddress', ''),
-            'smtp_username' => $request->get('smtpUsername', ''),
-            'smtp_password' => $request->get('smtpPassword', '')
         ];
+
+        // Handle email configuration based on type
+        if ($formData['enable_email_action']) {
+            $emailType = $request->get('emailType', 'custom');
+            $formData['email_type'] = $emailType;
+            
+            if ($emailType === 'integration') {
+                // Get email configuration from database integration
+                $integrationId = $request->get('integrationId');
+                $integration = EmailIntegration::find($integrationId);
+                
+                if (!$integration) {
+                    return response()->json(['success' => false, 'error' => 'Email integration not found.'], 400);
+                }
+                
+                $formData['integration_id'] = $integrationId;
+                $formData['email_recipient'] = $request->get('emailRecipient', $integration->default_recipient ?? '');
+                $formData['smtp_host'] = $integration->smtp_host;
+                $formData['smtp_port'] = $integration->smtp_port;
+                $formData['smtp_ssl'] = $integration->smtp_ssl;
+                $formData['from_address'] = $integration->from_address;
+                $formData['smtp_username'] = $integration->smtp_username;
+                $formData['smtp_password'] = $integration->smtp_password;
+                $formData['integration_name'] = $integration->name;
+            } else {
+                // Use custom email configuration
+                $formData['email_recipient'] = $request->get('emailRecipient', '');
+                $formData['smtp_host'] = $request->get('smtpHost', '');
+                $formData['smtp_port'] = $request->get('smtpPort', '');
+                $formData['smtp_ssl'] = $request->boolean('smtpSsl');
+                $formData['from_address'] = $request->get('fromAddress', '');
+                $formData['smtp_username'] = $request->get('smtpUsername', '');
+                $formData['smtp_password'] = $request->get('smtpPassword', '');
+            }
+        }
 
         if (empty($formData['rule_name'])) {
             return response()->json(['success' => false, 'error' => 'Rule Name is required.'], 400);
@@ -235,13 +291,24 @@ class AIController extends Controller
         $smtpAuthFilePath = $this->rulesPath . DIRECTORY_SEPARATOR . 'smtp_auth_file.txt';
         $smtpAuthFileStatus = null;
         if ($formData['enable_email_action'] && !empty($formData['smtp_username']) && !empty($formData['smtp_password'])) {
-            $smtpAuthContent = "user: " . $formData['smtp_username'] . "\npassword: " . $formData['smtp_password'] . "\n";
-            try {
-                file_put_contents($smtpAuthFilePath, $smtpAuthContent);
-                $smtpAuthFileStatus = 'smtp_auth_file.txt created/updated.';
-            } catch (\Exception $e) {
-                Log::error("Failed to write smtp_auth_file.txt", ['message' => $e->getMessage()]);
-                $smtpAuthFileStatus = 'Error creating smtp_auth_file.txt: ' . $e->getMessage();
+            // For custom email configuration, create temporary auth file
+            if ($formData['email_type'] === 'custom') {
+                $smtpAuthContent = "user: " . $formData['smtp_username'] . "\npassword: " . $formData['smtp_password'] . "\n";
+                try {
+                    file_put_contents($smtpAuthFilePath, $smtpAuthContent);
+                    $smtpAuthFileStatus = 'smtp_auth_file.txt created/updated.';
+                } catch (\Exception $e) {
+                    Log::error("Failed to write smtp_auth_file.txt", ['message' => $e->getMessage()]);
+                    $smtpAuthFileStatus = 'Error creating smtp_auth_file.txt: ' . $e->getMessage();
+                }
+            } else {
+                // For integration, the auth file already exists, just log the usage
+                $integrationAuthFile = $this->findIntegrationAuthFile($formData['integration_id']);
+                if ($integrationAuthFile) {
+                    $smtpAuthFileStatus = "Using integration auth file: {$integrationAuthFile}";
+                } else {
+                    $smtpAuthFileStatus = 'Warning: Integration auth file not found.';
+                }
             }
         }
 

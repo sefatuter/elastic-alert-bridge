@@ -7,10 +7,30 @@ use Elastic\Elasticsearch\ClientBuilder;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use App\Models\EmailIntegration;
 
 class ElasticsearchController extends Controller
 {
-    private $rulesPath = '/home/sefaubuntu/elastic-alert-bridge/api/app/Services/elastalert2/rules';
+    private $integrationAuthPath = '/home/sefaubuntu/elastic-alert-bridge/api/app/Services/elastalert2/rules';
+
+    // Helper method to find the correct SMTP auth file for an integration
+    private function findIntegrationAuthFile($integrationId)
+    {
+        if (!$integrationId) {
+            return null;
+        }
+        
+        // Use the integration ID as the file number for a direct mapping
+        $authFileName = "smtp_auth_file{$integrationId}.txt";
+        $authFilePath = $this->integrationAuthPath . DIRECTORY_SEPARATOR . $authFileName;
+        
+        // Check if the file exists
+        if (file_exists($authFilePath)) {
+            return $authFileName;
+        }
+        
+        return null;
+    }
 
     public function index()
     {
@@ -22,84 +42,5 @@ class ElasticsearchController extends Controller
         return view('elasticsearch.create-alert');
     }    
 
-    public function printRule(Request $request)
-    {
-        $outputData = [
-            'Rule Name' => $request->get('ruleName', ''),
-            'Elasticsearch Index' => $request->get('index', ''),
-            'Alert Requirements' => $request->get('prompt', ''),
-            'KQL Syntax' => $request->get('kql', ''),
-            'Schedule Interval' => $request->get('interval', ''),
-            'Schedule Unit' => $request->get('unit', '')
-        ];
-
-        $output = "======== FORM DATA PREVIEW ========\n";
-        foreach ($outputData as $key => $value) {
-            if ($key === 'KQL Syntax' && empty($value)) {
-                continue;
-            }
-            $output .= $key . ": " . ($value ?: 'N/A') . "\n";
-        }
-
-        if ($request->boolean('enableEmailAction')) {
-            $output .= "\n-------- EMAIL ACTIONS --------\n";
-            $output .= "Recipient Email(s): " . ($request->get('emailRecipient', '') ?: 'N/A') . "\n";
-            $output .= "SMTP Host: " . ($request->get('smtpHost', '') ?: 'N/A') . "\n";
-            $output .= "SMTP Port: " . ($request->get('smtpPort', '') ?: 'N/A') . "\n";
-            $output .= "SMTP SSL: " . ($request->boolean('smtpSsl') ? 'Yes' : 'No') . "\n";
-            $output .= "From Address: " . ($request->get('fromAddress', '') ?: 'N/A') . "\n";
-            $output .= "SMTP Username: " . ($request->get('smtpUsername', '') ?: 'N/A') . "\n";
-            $output .= "SMTP Password: " . ($request->get('smtpPassword') ? '[SET]' : 'N/A') . "\n";
-            $smtpAuthFilePath = $this->rulesPath . DIRECTORY_SEPARATOR . 'smtp_auth_file.txt';
-            $output .= "SMTP Auth File: " . $smtpAuthFilePath . "\n";
-        }
-
-        $output .= "=================================";
-        return response($output, 200)->header('Content-Type', 'text/plain');
-    }
-
-    public function showRulesPage()
-    {
-        return view('elasticsearch.rules', ['rulesPath' => $this->rulesPath]);
-    }
-
-    public function listRuleFiles()
-    {
-        try {
-            if (!is_dir($this->rulesPath) || !is_readable($this->rulesPath)) {
-                return response()->json(['error' => 'Rules directory is not accessible.', 'path' => $this->rulesPath], 500);
-            }
-            $files = scandir($this->rulesPath);
-            $yamlFiles = array_filter($files, function($file) {
-                return pathinfo($file, PATHINFO_EXTENSION) === 'yaml' || pathinfo($file, PATHINFO_EXTENSION) === 'yml';
-            });
-            return response()->json(array_values($yamlFiles));
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to list rule files: ' . $e->getMessage()], 500);
-        }
-    }
-
-    public function getRuleFileContent(Request $request)
-    {
-        $fileName = $request->get('file');
-        if (!$fileName) {
-            return response()->json(['error' => 'File name parameter is required.'], 400);
-        }
-        $fileName = basename($fileName);
-        $filePath = $this->rulesPath . DIRECTORY_SEPARATOR . $fileName;
-
-        if (pathinfo($filePath, PATHINFO_EXTENSION) !== 'yaml' && pathinfo($filePath, PATHINFO_EXTENSION) !== 'yml') {
-            return response()->json(['error' => 'Invalid file type. Only YAML files are allowed.'], 400);
-        }
-
-        try {
-            if (!file_exists($filePath) || !is_readable($filePath)) {
-                return response()->json(['error' => 'Rule file not found or not readable.', 'path' => $filePath], 404);
-            }
-            $content = file_get_contents($filePath);
-            return response($content, 200)->header('Content-Type', 'text/plain');
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to read rule file: ' . $e->getMessage(), 'path' => $filePath], 500);
-        }
-    }
+    
 } 

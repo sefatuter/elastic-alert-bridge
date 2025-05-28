@@ -43,7 +43,8 @@ class IntegrationsController extends Controller
         ]);
 
         try {
-            EmailIntegration::updateOrCreate(
+            // Save to database first to get the ID
+            $integration = EmailIntegration::updateOrCreate(
                 ['name' => $request->input('name')],
                 [
                     'smtp_host' => $request->input('smtp_host'),
@@ -55,6 +56,27 @@ class IntegrationsController extends Controller
                     'default_recipient' => $request->input('default_recipient')
                 ]
             );
+
+            // Create SMTP auth file using the integration ID
+            $authFilePath = '/home/sefaubuntu/elastic-alert-bridge/api/app/Services/elastalert2/rules';
+            
+            // Ensure directory exists
+            if (!is_dir($authFilePath)) {
+                mkdir($authFilePath, 0755, true);
+            }
+            
+            // Use integration ID as the file number
+            $authFileName = "smtp_auth_file{$integration->id}.txt";
+            $authFileFullPath = $authFilePath . DIRECTORY_SEPARATOR . $authFileName;
+            
+            // Create SMTP auth file content
+            $smtpAuthContent = "user: " . $request->input('smtp_username') . "\n";
+            $smtpAuthContent .= "password: " . $request->input('smtp_password') . "\n";
+            
+            // Write the auth file
+            file_put_contents($authFileFullPath, $smtpAuthContent);
+            
+            Log::info("SMTP auth file created: {$authFileName} for integration '{$request->input('name')}' (ID: {$integration->id})");
 
             Log::info("Email integration '{$request->input('name')}' saved successfully");
 
@@ -109,5 +131,72 @@ class IntegrationsController extends Controller
             Log::error('Failed to test email integration: ' . $e->getMessage());
             return response()->json(['success' => false, 'error' => 'Failed to test email integration'], 500);
         }
+    }
+
+    public function getEmailIntegrations()
+    {
+        try {
+            $integrations = EmailIntegration::all(['id', 'name', 'smtp_host', 'smtp_port', 'smtp_ssl', 'from_address', 'default_recipient']);
+            
+            return response()->json(['success' => true, 'integrations' => $integrations]);
+        } catch (\Exception $e) {
+            Log::error('Failed to get email integrations: ' . $e->getMessage());
+            return response()->json(['success' => false, 'error' => 'Failed to get email integrations'], 500);
+        }
+    }
+
+    private $rulesPath = '/home/sefaubuntu/elastic-alert-bridge/api/app/Services/elastalert2/rules';
+    private $integrationAuthPath = '/home/sefaubuntu/elastic-alert-bridge/api/app/Services/elastalert2/rules';
+
+    public function reviewDataRuleIntegration(Request $request)
+    {
+        $outputData = [
+            'Rule Name' => $request->get('ruleName', ''),
+            'Elasticsearch Index' => $request->get('index', ''),
+            'Alert Requirements' => $request->get('prompt', ''),
+            'KQL Syntax' => $request->get('kql', ''),
+            'Schedule Interval' => $request->get('interval', ''),
+            'Schedule Unit' => $request->get('unit', '')
+        ];
+
+        $output = "======== FORM DATA PREVIEW ========\n";
+        foreach ($outputData as $key => $value) {
+            if ($key === 'KQL Syntax' && empty($value)) {
+                continue;
+            }
+            $output .= $key . ": " . ($value ?: 'N/A') . "\n";
+        }
+
+        if ($request->boolean('enableEmailAction')) {
+            $output .= "\n-------- EMAIL ACTIONS --------\n";
+            
+            $emailType = $request->get('emailType', 'custom');
+            $output .= "Email Type: " . ucfirst($emailType) . "\n";
+            
+            if ($emailType === 'integration') {
+                $integrationId = $request->get('integrationId');
+                $integrationName = $request->get('integrationName', 'Unknown');
+                $output .= "Integration: " . $integrationName . " (ID: " . $integrationId . ")\n";
+                
+                $integrationAuthFile = $this->findIntegrationAuthFile($integrationId);
+                if ($integrationAuthFile) {
+                    $smtpAuthFilePath = $this->integrationAuthPath . DIRECTORY_SEPARATOR . $integrationAuthFile;
+                } else {
+                    $smtpAuthFilePath = $this->integrationAuthPath . DIRECTORY_SEPARATOR . 'smtp_auth_file.txt';
+                }
+            } else {
+                $smtpAuthFilePath = '/home/sefaubuntu/elastic-alert-bridge/config/elastalert/rules/smtp_auth_file.txt';
+            }
+            
+            $output .= "Recipient Email(s): " . ($request->get('emailRecipient', '') ?: 'N/A') . "\n";
+            $output .= "SMTP Host: " . ($request->get('smtpHost', '') ?: 'N/A') . "\n";
+            $output .= "SMTP Port: " . ($request->get('smtpPort', '') ?: 'N/A') . "\n";
+            $output .= "SMTP SSL: " . ($request->boolean('smtpSsl') ? 'Yes' : 'No') . "\n";
+            $output .= "From Address: " . ($request->get('fromAddress', '') ?: 'N/A') . "\n";
+            $output .= "SMTP Auth File: " . $smtpAuthFilePath . "\n";
+        }
+
+        $output .= "=================================";
+        return response($output, 200)->header('Content-Type', 'text/plain');
     }
 } 

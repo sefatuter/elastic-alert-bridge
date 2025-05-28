@@ -280,6 +280,146 @@
             border-radius: 12px;
             margin-left: 8px;
         }
+
+        .action-grid {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .action-card {
+            flex: 1;
+            min-width: 200px;
+            background: #ffffff;
+            border: 2px solid #d3dae6;
+            border-radius: 8px;
+            padding: 24px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            position: relative;
+        }
+
+        .action-card:hover:not(.disabled) {
+            border-color: #006bb4;
+            box-shadow: 0 2px 8px rgba(0, 107, 180, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .action-card.selected {
+            border-color: #006bb4;
+            background: #f0f8ff;
+            box-shadow: 0 2px 8px rgba(0, 107, 180, 0.2);
+        }
+
+        .action-card.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #f7f9fb;
+        }
+
+        .action-card.disabled:hover {
+            transform: none;
+            box-shadow: none;
+            border-color: #d3dae6;
+        }
+
+        .action-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 16px;
+            color: #69707d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .action-card.selected .action-icon {
+            color: #006bb4;
+        }
+
+        .action-card.disabled .action-icon {
+            color: #98a2b3;
+        }
+
+        .action-label {
+            font-size: 16px;
+            font-weight: 600;
+            color: #343741;
+            margin-bottom: 8px;
+        }
+
+        .action-card.selected .action-label {
+            color: #006bb4;
+        }
+
+        .action-description {
+            font-size: 13px;
+            color: #69707d;
+            line-height: 1.4;
+        }
+
+        .integration-header {
+            margin-bottom: 16px;
+        }
+
+        .integration-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #343741;
+        }
+
+        .integration-description {
+            font-size: 13px;
+            color: #69707d;
+        }
+
+        .integration-options {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .integration-preview {
+            background: #ffffff;
+            border: 1px solid #d3dae6;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .integration-preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .integration-badge {
+            background: #006bb4;
+            color: #ffffff;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .integration-details {
+            margin-top: 16px;
+        }
+
+        .detail-row {
+            margin-bottom: 8px;
+        }
+
+        .detail-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #343741;
+        }
+
+        .selected-integration {
+            background: #f7f9fb;
+        }
     </style>
 </head>
 <body>
@@ -398,50 +538,129 @@
                 Configure actions to be performed when an alert is triggered.
             </div>
 
-            <div class="form-group">
-                <label class="form-label" style="display: flex; align-items: center;">
-                    <input type="checkbox" id="enableEmailAction" onchange="toggleEmailActionFields()" style="margin-right: 10px; width: 16px; height: 16px;">
-                    Send Email Notification
-                </label>
+            <!-- Action Selection Grid -->
+            <div class="action-grid">
+                <div class="action-card" id="emailActionCard" onclick="selectAction('email')">
+                    <div class="action-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M20,8L12,13L4,8V6L12,11L20,6M20,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6C2.89,4 2,4.89 2,4Z"/>
+                        </svg>
+                    </div>
+                    <div class="action-label">Email</div>
+                    <div class="action-description">Send email notifications</div>
+                </div>
+
+                <div class="action-card disabled" id="slackActionCard" onclick="selectAction('slack')">
+                    <div class="action-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.527 2.527 0 0 1 2.521 2.521 2.527 2.527 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/>
+                        </svg>
+                    </div>
+                    <div class="action-label">Slack</div>
+                    <div class="action-description">Coming soon</div>
+                </div>
+
+                <div class="action-card disabled" id="discordActionCard" onclick="selectAction('discord')">
+                    <div class="action-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+                        </svg>
+                    </div>
+                    <div class="action-label">Discord</div>
+                    <div class="action-description">Coming soon</div>
+                </div>
             </div>
 
-            <div id="emailActionFields" style="display: none; padding-left: 26px; border-left: 2px solid #f0f2f5; margin-top: 20px;">
-                <div class="form-group">
-                    <label class="form-label" for="emailRecipient">Recipient Email(s)</label>
-                    <div class="form-description">Enter one or more email addresses, separated by commas.</div>
-                    <input type="email" id="emailRecipient" class="form-input" placeholder="e.g., user1@example.com, user2@example.com">
+            <!-- Email Integration Selection -->
+            <div id="emailIntegrationSection" style="display: none; margin-top: 24px;">
+                <div class="integration-header">
+                    <h3 class="integration-title">Select Email Integration</h3>
+                    <div class="integration-description">Choose an existing email integration or enter custom settings.</div>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label" for="smtpHost">SMTP Host</label>
-                    <input type="text" id="smtpHost" class="form-input" placeholder="e.g., smtp.gmail.com">
-                </div>
+                <div class="integration-options">
+                    <div class="form-group">
+                        <label class="form-label">Email Integration</label>
+                        <div class="form-description">Select a pre-configured email integration or choose "Custom" to enter manual settings.</div>
+                        <select id="emailIntegrationSelect" class="form-input" onchange="handleEmailIntegrationChange()">
+                            <option value="">Select an integration...</option>
+                            <option value="custom">Custom Settings</option>
+                        </select>
+                    </div>
 
-                <div class="form-group">
-                    <label class="form-label" for="smtpPort">SMTP Port</label>
-                    <input type="number" id="smtpPort" class="form-input" placeholder="e.g., 465 or 587">
-                </div>
+                    <!-- Selected Integration Display -->
+                    <div id="selectedIntegrationDisplay" style="display: none; margin-top: 16px;">
+                        <div class="integration-preview">
+                            <div class="integration-preview-header">
+                                <strong id="integrationName"></strong>
+                                <span class="integration-badge">Selected</span>
+                            </div>
+                            <div class="integration-details">
+                                <div class="detail-row">
+                                    <span class="detail-label">SMTP Host:</span>
+                                    <span id="integrationSmtpHost"></span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Port:</span>
+                                    <span id="integrationSmtpPort"></span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">From Address:</span>
+                                    <span id="integrationFromAddress"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="form-group">
-                    <label class="form-label" style="display: flex; align-items: center;">
-                        <input type="checkbox" id="smtpSsl" style="margin-right: 10px; width: 16px; height: 16px;" checked>
-                        Use SSL for SMTP
-                    </label>
-                </div>
+                    <!-- Custom Email Settings -->
+                    <div id="customEmailFields" style="display: none; margin-top: 20px; padding-left: 0;">
+                        <div class="form-group">
+                            <label class="form-label" for="emailRecipient">Recipient Email(s)</label>
+                            <div class="form-description">Enter one or more email addresses, separated by commas.</div>
+                            <input type="email" id="emailRecipient" class="form-input" placeholder="e.g., user1@example.com, user2@example.com">
+                        </div>
 
-                <div class="form-group">
-                    <label class="form-label" for="fromAddress">From Address</label>
-                    <input type="email" id="fromAddress" class="form-input" placeholder="e.g., alerts@yourdomain.com">
-                </div>
+                        <div class="form-group">
+                            <label class="form-label" for="smtpHost">SMTP Host</label>
+                            <input type="text" id="smtpHost" class="form-input" placeholder="e.g., smtp.gmail.com">
+                        </div>
 
-                <div class="form-group">
-                    <label class="form-label" for="smtpUsername">SMTP Username (Email)</label>
-                    <input type="email" id="smtpUsername" class="form-input" placeholder="Usually your email address">
-                </div>
+                        <div class="form-group">
+                            <label class="form-label" for="smtpPort">SMTP Port</label>
+                            <input type="number" id="smtpPort" class="form-input" placeholder="e.g., 465 or 587">
+                        </div>
 
-                <div class="form-group">
-                    <label class="form-label" for="smtpPassword">SMTP Password</label>
-                    <input type="password" id="smtpPassword" class="form-input">
+                        <div class="form-group">
+                            <label class="form-label" style="display: flex; align-items: center;">
+                                <input type="checkbox" id="smtpSsl" style="margin-right: 10px; width: 16px; height: 16px;" checked>
+                                Use SSL for SMTP
+                            </label>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="fromAddress">From Address</label>
+                            <input type="email" id="fromAddress" class="form-input" placeholder="e.g., alerts@yourdomain.com">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="smtpUsername">SMTP Username (Email)</label>
+                            <input type="email" id="smtpUsername" class="form-input" placeholder="Usually your email address">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="smtpPassword">SMTP Password</label>
+                            <input type="password" id="smtpPassword" class="form-input">
+                        </div>
+                    </div>
+
+                    <!-- Recipient Email for Integration -->
+                    <div id="integrationRecipientField" style="display: none; margin-top: 20px;">
+                        <div class="form-group">
+                            <label class="form-label" for="integrationEmailRecipient">Recipient Email(s)</label>
+                            <div class="form-description">Enter the email addresses that should receive alerts (overrides default recipient if set).</div>
+                            <input type="email" id="integrationEmailRecipient" class="form-input" placeholder="e.g., user1@example.com, user2@example.com">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -454,8 +673,8 @@
             <button type="button" class="btn btn-primary" onclick="generateRule()">
                 Generate Rule
             </button>
-            <button type="button" class="btn btn-primary" onclick="printRule()">
-                Print Rule
+            <button type="button" class="btn btn-primary" onclick="reviewDataRuleIntegration()">
+                Review Rule
             </button>
         </div>
 
@@ -511,6 +730,188 @@
             }
         }
 
+        // Global variables
+        let selectedAction = null;
+        let emailIntegrations = [];
+
+        // Action selection function
+        function selectAction(action) {
+            console.log(`Selected action: ${action}`);
+            
+            // Clear previous selections
+            document.querySelectorAll('.action-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // Hide all action sections
+            document.getElementById('emailIntegrationSection').style.display = 'none';
+            
+            if (action === 'email') {
+                // Mark email card as selected
+                document.getElementById('emailActionCard').classList.add('selected');
+                selectedAction = 'email';
+                
+                // Show email integration section
+                document.getElementById('emailIntegrationSection').style.display = 'block';
+                
+                // Load email integrations if not already loaded
+                if (emailIntegrations.length === 0) {
+                    loadEmailIntegrations();
+                }
+            } else if (action === 'slack' || action === 'discord') {
+                // Show coming soon message for disabled actions
+                alert(`${action.charAt(0).toUpperCase() + action.slice(1)} integration is coming soon!`);
+            } else {
+                selectedAction = null;
+            }
+        }
+
+        // Load email integrations from the database
+        async function loadEmailIntegrations() {
+            try {
+                const response = await fetch('/api/elasticsearch/integrations/email/list');
+                const result = await response.json();
+                
+                if (result.success) {
+                    emailIntegrations = result.integrations;
+                    populateEmailIntegrationSelect();
+                } else {
+                    console.error('Failed to load email integrations:', result.error);
+                    alert('Failed to load email integrations. You can still use custom settings.');
+                }
+            } catch (error) {
+                console.error('Error loading email integrations:', error);
+                alert('Error loading email integrations. You can still use custom settings.');
+            }
+        }
+
+        // Populate the email integration dropdown
+        function populateEmailIntegrationSelect() {
+            const select = document.getElementById('emailIntegrationSelect');
+            
+            // Clear existing options except the first two (placeholder and custom)
+            while (select.children.length > 2) {
+                select.removeChild(select.lastChild);
+            }
+            
+            // Add integration options
+            emailIntegrations.forEach(integration => {
+                const option = document.createElement('option');
+                option.value = integration.id;
+                option.textContent = integration.name;
+                option.dataset.integration = JSON.stringify(integration);
+                select.appendChild(option);
+            });
+        }
+
+        // Email integration change handler
+        function handleEmailIntegrationChange() {
+            const select = document.getElementById('emailIntegrationSelect');
+            const selectedValue = select.value;
+            
+            // Hide all sub-sections
+            document.getElementById('selectedIntegrationDisplay').style.display = 'none';
+            document.getElementById('customEmailFields').style.display = 'none';
+            document.getElementById('integrationRecipientField').style.display = 'none';
+            
+            if (selectedValue === 'custom') {
+                // Show custom email fields
+                document.getElementById('customEmailFields').style.display = 'block';
+            } else if (selectedValue && selectedValue !== '') {
+                // Show selected integration
+                const selectedOption = select.options[select.selectedIndex];
+                const integration = JSON.parse(selectedOption.dataset.integration);
+                
+                displaySelectedIntegration(integration);
+                document.getElementById('selectedIntegrationDisplay').style.display = 'block';
+                document.getElementById('integrationRecipientField').style.display = 'block';
+                
+                // Pre-fill recipient field with default if available
+                const recipientField = document.getElementById('integrationEmailRecipient');
+                if (integration.default_recipient) {
+                    recipientField.value = integration.default_recipient;
+                }
+            }
+        }
+
+        // Display selected integration details
+        function displaySelectedIntegration(integration) {
+            document.getElementById('integrationName').textContent = integration.name;
+            document.getElementById('integrationSmtpHost').textContent = integration.smtp_host;
+            document.getElementById('integrationSmtpPort').textContent = integration.smtp_port;
+            document.getElementById('integrationFromAddress').textContent = integration.from_address;
+        }
+
+        // Get email configuration for form submission
+        function getEmailConfiguration() {
+            if (selectedAction !== 'email') {
+                return null;
+            }
+            
+            const select = document.getElementById('emailIntegrationSelect');
+            const selectedValue = select.value;
+            
+            if (selectedValue === 'custom') {
+                // Return custom configuration
+                return {
+                    type: 'custom',
+                    emailRecipient: document.getElementById('emailRecipient').value.trim(),
+                    smtpHost: document.getElementById('smtpHost').value.trim(),
+                    smtpPort: document.getElementById('smtpPort').value,
+                    smtpSsl: document.getElementById('smtpSsl').checked,
+                    fromAddress: document.getElementById('fromAddress').value.trim(),
+                    smtpUsername: document.getElementById('smtpUsername').value.trim(),
+                    smtpPassword: document.getElementById('smtpPassword').value
+                };
+            } else if (selectedValue && selectedValue !== '') {
+                // Return integration configuration
+                const selectedOption = select.options[select.selectedIndex];
+                const integration = JSON.parse(selectedOption.dataset.integration);
+                const recipient = document.getElementById('integrationEmailRecipient').value.trim();
+                
+                return {
+                    type: 'integration',
+                    integrationId: integration.id,
+                    integrationName: integration.name,
+                    emailRecipient: recipient || integration.default_recipient,
+                    smtpHost: integration.smtp_host,
+                    smtpPort: integration.smtp_port,
+                    smtpSsl: integration.smtp_ssl,
+                    fromAddress: integration.from_address,
+                    // Note: We don't include username/password from integration for security
+                };
+            }
+            
+            return null;
+        }
+
+        // Update the existing form validation to work with new structure
+        function validateEmailConfiguration() {
+            if (selectedAction !== 'email') {
+                return true; // No email action selected, so no validation needed
+            }
+            
+            const emailConfig = getEmailConfiguration();
+            if (!emailConfig) {
+                alert('Please select an email integration or configure custom settings.');
+                return false;
+            }
+            
+            if (!emailConfig.emailRecipient) {
+                alert('Please specify recipient email addresses.');
+                return false;
+            }
+            
+            if (emailConfig.type === 'custom') {
+                if (!emailConfig.smtpHost || !emailConfig.smtpPort || !emailConfig.fromAddress) {
+                    alert('Please fill in all required email configuration fields.');
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+
         // Form validation
         function validateForm() {
             const ruleName = document.getElementById('ruleName').value.trim();
@@ -541,6 +942,11 @@
                 alert('Please provide a more detailed description of your alert requirements.');
                 return false;
             }
+
+            // Validate email configuration if email action is selected
+            if (!validateEmailConfiguration()) {
+                return false;
+            }
             
             return true;
         }
@@ -562,20 +968,30 @@
                 prompt: document.getElementById('alertPrompt').value.trim(), 
                 kql: document.getElementById('kqlSyntax').value.trim(),
                 interval: document.getElementById('scheduleInterval').value,
-                unit: document.getElementById('scheduleUnit').value
+                unit: document.getElementById('scheduleUnit').value,
+                selectedAction: selectedAction
             };
 
-            // Add email action data if enabled
-            const enableEmailAction = document.getElementById('enableEmailAction').checked;
-            formData.enableEmailAction = enableEmailAction;
-            if (enableEmailAction) {
-                formData.emailRecipient = document.getElementById('emailRecipient').value.trim();
-                formData.smtpHost = document.getElementById('smtpHost').value.trim();
-                formData.smtpPort = document.getElementById('smtpPort').value;
-                formData.smtpSsl = document.getElementById('smtpSsl').checked;
-                formData.fromAddress = document.getElementById('fromAddress').value.trim();
-                formData.smtpUsername = document.getElementById('smtpUsername').value.trim();
-                formData.smtpPassword = document.getElementById('smtpPassword').value; 
+            // Add email configuration if email action is selected
+            const emailConfig = getEmailConfiguration();
+            if (emailConfig) {
+                formData.enableEmailAction = true;
+                formData.emailType = emailConfig.type;
+                formData.emailRecipient = emailConfig.emailRecipient;
+                formData.smtpHost = emailConfig.smtpHost;
+                formData.smtpPort = emailConfig.smtpPort;
+                formData.smtpSsl = emailConfig.smtpSsl;
+                formData.fromAddress = emailConfig.fromAddress;
+                
+                if (emailConfig.type === 'custom') {
+                    formData.smtpUsername = emailConfig.smtpUsername;
+                    formData.smtpPassword = emailConfig.smtpPassword;
+                } else if (emailConfig.type === 'integration') {
+                    formData.integrationId = emailConfig.integrationId;
+                    formData.integrationName = emailConfig.integrationName;
+                }
+            } else {
+                formData.enableEmailAction = false;
             }
             
             console.log('Form data for generateRule (POST request):', formData);
@@ -642,9 +1058,9 @@
             }
         }
 
-        // Print rule function
-        async function printRule() {
-            console.log('Print rule button clicked');
+        // Review rule function
+        async function reviewDataRuleIntegration() {
+            console.log('Review rule button clicked');
             
             // Get form data (similar to generateRule)
             const indexSelect = document.getElementById('indexSelect');
@@ -658,20 +1074,30 @@
                 prompt: document.getElementById('alertPrompt').value.trim(),
                 kql: document.getElementById('kqlSyntax').value.trim(),
                 interval: document.getElementById('scheduleInterval').value,
-                unit: document.getElementById('scheduleUnit').value
+                unit: document.getElementById('scheduleUnit').value,
+                selectedAction: selectedAction
             };
 
-            // Add email action data if enabled
-            const enableEmailAction = document.getElementById('enableEmailAction').checked;
-            formData.enableEmailAction = enableEmailAction;
-            if (enableEmailAction) {
-                formData.emailRecipient = document.getElementById('emailRecipient').value.trim();
-                formData.smtpHost = document.getElementById('smtpHost').value.trim();
-                formData.smtpPort = document.getElementById('smtpPort').value;
-                formData.smtpSsl = document.getElementById('smtpSsl').checked;
-                formData.fromAddress = document.getElementById('fromAddress').value.trim();
-                formData.smtpUsername = document.getElementById('smtpUsername').value.trim();
-                formData.smtpPassword = document.getElementById('smtpPassword').value; // Password not trimmed
+            // Add email configuration if email action is selected
+            const emailConfig = getEmailConfiguration();
+            if (emailConfig) {
+                formData.enableEmailAction = true;
+                formData.emailType = emailConfig.type;
+                formData.emailRecipient = emailConfig.emailRecipient;
+                formData.smtpHost = emailConfig.smtpHost;
+                formData.smtpPort = emailConfig.smtpPort;
+                formData.smtpSsl = emailConfig.smtpSsl;
+                formData.fromAddress = emailConfig.fromAddress;
+                
+                if (emailConfig.type === 'custom') {
+                    formData.smtpUsername = emailConfig.smtpUsername;
+                    formData.smtpPassword = emailConfig.smtpPassword;
+                } else if (emailConfig.type === 'integration') {
+                    formData.integrationId = emailConfig.integrationId;
+                    formData.integrationName = emailConfig.integrationName;
+                }
+            } else {
+                formData.enableEmailAction = false;
             }
             
             console.log('Form data for print:', formData);
@@ -713,17 +1139,6 @@
         document.addEventListener('DOMContentLoaded', function() {
             loadIndexes();
         });
-
-        // Toggle Email Action Fields visibility
-        function toggleEmailActionFields() {
-            const emailFieldsDiv = document.getElementById('emailActionFields');
-            const enableCheckbox = document.getElementById('enableEmailAction');
-            if (enableCheckbox.checked) {
-                emailFieldsDiv.style.display = 'block';
-            } else {
-                emailFieldsDiv.style.display = 'none';
-            }
-        }
     </script>
 </body>
 </html> 
