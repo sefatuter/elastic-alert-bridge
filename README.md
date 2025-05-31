@@ -1,7 +1,5 @@
 # Elastic Alert Bridge (EAB)
 
-Elastic Alert Bridge is a lightweight notification and AI-digest tool that connects directly to your existing Elasticsearch + ElastAlert stack.
-
 ## What This Project Does
 
 ## Project Structure
