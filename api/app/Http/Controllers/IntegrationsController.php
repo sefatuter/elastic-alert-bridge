@@ -148,7 +148,25 @@ class IntegrationsController extends Controller
     private $rulesPath = '/home/sefaubuntu/elastic-alert-bridge/api/app/Services/elastalert2/rules';
     private $integrationAuthPath = '/home/sefaubuntu/elastic-alert-bridge/api/app/Services/elastalert2/rules';
 
-    public function reviewDataRuleIntegration(Request $request)
+    private function findIntegrationAuthFile($integrationId)
+    {
+        if (!$integrationId) {
+            return null;
+        }
+        
+        // Use the integration ID as the file number for a direct mapping
+        $authFileName = "smtp_auth_file{$integrationId}.txt";
+        $authFilePath = $this->integrationAuthPath . DIRECTORY_SEPARATOR . $authFileName;
+        
+        // Check if the file exists
+        if (file_exists($authFilePath)) {
+            return $authFileName;
+        }
+        
+        return null;
+    }
+
+    public function reviewConf(Request $request)
     {
         $outputData = [
             'Rule Name' => $request->get('ruleName', ''),
@@ -167,7 +185,10 @@ class IntegrationsController extends Controller
             $output .= $key . ": " . ($value ?: 'N/A') . "\n";
         }
 
-        if ($request->boolean('enableEmailAction')) {
+        // Check if email action is enabled
+        $enableEmailAction = $request->boolean('enableEmailAction') || $request->get('selectedAction') === 'email';
+        
+        if ($enableEmailAction) {
             $output .= "\n-------- EMAIL ACTIONS --------\n";
             
             $emailType = $request->get('emailType', 'custom');
@@ -184,19 +205,54 @@ class IntegrationsController extends Controller
                 } else {
                     $smtpAuthFilePath = $this->integrationAuthPath . DIRECTORY_SEPARATOR . 'smtp_auth_file.txt';
                 }
+                
+                // Get recipient from either custom field or integration field
+                $recipient = $request->get('integrationEmailRecipient', $request->get('emailRecipient', ''));
+                $output .= "Recipient Email(s): " . ($recipient ?: 'N/A') . "\n";
+                
+                // Try to get integration details from database
+                if ($integrationId) {
+                    try {
+                        $integration = EmailIntegration::find($integrationId);
+                        if ($integration) {
+                            $output .= "SMTP Host: " . $integration->smtp_host . "\n";
+                            $output .= "SMTP Port: " . $integration->smtp_port . "\n";
+                            $output .= "SMTP SSL: " . ($integration->smtp_ssl ? 'Yes' : 'No') . "\n";
+                            $output .= "From Address: " . $integration->from_address . "\n";
+                        } else {
+                            $output .= "SMTP Host: Integration not found\n";
+                            $output .= "SMTP Port: N/A\n";
+                            $output .= "SMTP SSL: N/A\n";
+                            $output .= "From Address: N/A\n";
+                        }
+                    } catch (\Exception $e) {
+                        $output .= "SMTP Host: Error loading integration\n";
+                        $output .= "SMTP Port: N/A\n";
+                        $output .= "SMTP SSL: N/A\n";
+                        $output .= "From Address: N/A\n";
+                    }
+                }
+                
             } else {
+                // Custom email configuration
                 $smtpAuthFilePath = '/home/sefaubuntu/elastic-alert-bridge/config/elastalert/rules/smtp_auth_file.txt';
+                
+                $output .= "Recipient Email(s): " . ($request->get('emailRecipient', '') ?: 'N/A') . "\n";
+                $output .= "SMTP Host: " . ($request->get('smtpHost', '') ?: 'N/A') . "\n";
+                $output .= "SMTP Port: " . ($request->get('smtpPort', '') ?: 'N/A') . "\n";
+                $output .= "SMTP SSL: " . ($request->boolean('smtpSsl') ? 'Yes' : 'No') . "\n";
+                $output .= "From Address: " . ($request->get('fromAddress', '') ?: 'N/A') . "\n";
+                $output .= "SMTP Username: " . ($request->get('smtpUsername', '') ?: 'N/A') . "\n";
             }
             
-            $output .= "Recipient Email(s): " . ($request->get('emailRecipient', '') ?: 'N/A') . "\n";
-            $output .= "SMTP Host: " . ($request->get('smtpHost', '') ?: 'N/A') . "\n";
-            $output .= "SMTP Port: " . ($request->get('smtpPort', '') ?: 'N/A') . "\n";
-            $output .= "SMTP SSL: " . ($request->boolean('smtpSsl') ? 'Yes' : 'No') . "\n";
-            $output .= "From Address: " . ($request->get('fromAddress', '') ?: 'N/A') . "\n";
             $output .= "SMTP Auth File: " . $smtpAuthFilePath . "\n";
+        } else {
+            $output .= "\n-------- NO EMAIL ACTIONS SELECTED --------\n";
         }
 
-        $output .= "=================================";
+        $output .= "\n=================================\n";
+        $output .= "Generated on: " . now()->format('Y-m-d H:i:s') . "\n";
+        
         return response($output, 200)->header('Content-Type', 'text/plain');
     }
 } 

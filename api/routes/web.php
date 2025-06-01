@@ -38,8 +38,10 @@ Route::post('/api/elasticsearch/integrations/email', [IntegrationsController::cl
 Route::delete('/api/elasticsearch/integrations/email', [IntegrationsController::class, 'deleteEmailIntegration'])->name('api.elasticsearch.integrations.email.delete');
 Route::post('/api/elasticsearch/integrations/email/test', [IntegrationsController::class, 'testEmailIntegration'])->name('api.elasticsearch.integrations.email.test');
 Route::get('/api/elasticsearch/integrations/email/list', [IntegrationsController::class, 'getEmailIntegrations'])->name('api.elasticsearch.integrations.email.list');
-Route::get('/elasticsearch/print-rule', [IntegrationsController::class, 'reviewDataRuleIntegration'])->name('elasticsearch.print-rule');
 
+// Review Configuration routes, both GET and POST
+Route::get('/elasticsearch/print-rule', [IntegrationsController::class, 'reviewConf'])->name('elasticsearch.print-rule');
+Route::post('/elasticsearch/print-rule', [IntegrationsController::class, 'reviewConf'])->name('elasticsearch.print-rule.post');
 
 // Gemini Test API Page
 Route::get('/test-gemini-api', [TestApiController::class, 'showTestPage'])->name('test.gemini.show');
