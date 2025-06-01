@@ -122,6 +122,51 @@
             box-shadow: 0 0 0 3px rgba(0, 107, 180, 0.1);
         }
 
+        /* Specific styling for select dropdowns */
+        .form-select {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid #d3dae6;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            background: #ffffff;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+            padding-right: 40px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: #006bb4;
+            box-shadow: 0 0 0 3px rgba(0, 107, 180, 0.1);
+            background-color: #f8f9fa;
+        }
+
+        .form-select:hover {
+            border-color: #98a2b3;
+            background-color: #f8f9fa;
+        }
+
+        .form-select option {
+            padding: 8px 12px;
+            font-size: 14px;
+            background: #ffffff;
+            color: #343741;
+        }
+
+        .form-select option:checked {
+            background: #006bb4;
+            color: #ffffff;
+        }
+
         .form-textarea {
             min-height: 120px;
             resize: vertical;
@@ -405,6 +450,64 @@
         .selected-integration {
             background: #f7f9fb;
         }
+
+        /* Specific button styles */
+        .btn-generate {
+            background: #28a745;
+            border-color: #28a745;
+            font-weight: 600;
+        }
+
+        .btn-generate:hover {
+            background: #218838;
+            border-color: #1e7e34;
+        }
+
+        .btn-review {
+            background: #17a2b8;
+            border-color: #17a2b8;
+            font-weight: 500;
+        }
+
+        .btn-review:hover {
+            background: #138496;
+            border-color: #117a8b;
+        }
+
+        /* Smooth transitions for email integration sections */
+        #selectedIntegrationDisplay,
+        #customEmailFields,
+        #integrationRecipientField {
+            transition: all 0.3s ease;
+            opacity: 1;
+        }
+
+        #selectedIntegrationDisplay[style*="display: none"],
+        #customEmailFields[style*="display: none"],
+        #integrationRecipientField[style*="display: none"] {
+            opacity: 0;
+        }
+
+        /* Integration preview styling */
+        .integration-preview {
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .integration-preview:hover {
+            border-color: #006bb4;
+            box-shadow: 0 2px 8px rgba(0, 107, 180, 0.1);
+        }
+
+        .integration-badge {
+            background: #28a745;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
@@ -416,6 +519,32 @@
         <h1 class="alert-title">Create ElastAlert Rule</h1>
     </div>
     <div class="container">
+
+        <!-- Error and Success Messages -->
+        @if ($errors->any())
+            <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                <div style="color: #dc2626; font-weight: 600; margin-bottom: 8px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="display: inline; margin-right: 8px;">
+                        <path d="M12,2L13.09,8.26L22,9L13.09,9.74L12,16L10.91,9.74L2,9L10.91,8.26L12,2Z"/>
+                    </svg>
+                    Error
+                </div>
+                @foreach ($errors->all() as $error)
+                    <div style="color: #dc2626; font-size: 14px; margin-bottom: 4px;">{{ $error }}</div>
+                @endforeach
+            </div>
+        @endif
+
+        @if (session('success'))
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+                <div style="color: #16a34a; font-weight: 600;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="display: inline; margin-right: 8px;">
+                        <path d="M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z"/>
+                    </svg>
+                    {{ session('success') }}
+                </div>
+            </div>
+        @endif
 
         <!-- Main Form -->
         <div class="form-section">
@@ -435,6 +564,7 @@
                         name="ruleName"
                         class="form-input" 
                         placeholder="e.g., Payment Service Error Alert, High Response Time Monitor..."
+                        value="{{ old('ruleName') }}"
                         required>
                     <div class="helper-text">
                         Use a clear, descriptive name that explains what this rule monitors.
@@ -450,7 +580,7 @@
                     <select 
                         id="indexSelect" 
                         name="index"
-                        class="form-input" 
+                        class="form-select" 
                         required>
                         <option value="">Select an index...</option>
                         @php
@@ -485,7 +615,7 @@
                         name="prompt"
                         class="form-input form-textarea prompt-textarea" 
                         placeholder="Example: Alert me when there are more than 10 error logs in the last 5 minutes from the payment service, or when the response time exceeds 2 seconds..."
-                        required></textarea>
+                        required>{{ old('prompt') }}</textarea>
                     <div class="helper-text">
                         The more detailed your description, the better the AI can generate an accurate ElastAlert rule.
                     </div>
@@ -505,7 +635,7 @@
                         name="kql"
                         class="form-input form-textarea kql-textarea" 
                         placeholder="level: error AND service.name: payment"
-                        ></textarea>
+                        >{{ old('kql') }}</textarea>
                     <div class="helper-text">
                         Examples: <code>status: 500</code>, <code>message: "timeout" AND host.name: web-*</code>, <code>response_time > 2000</code>
                     </div>
@@ -520,8 +650,8 @@
                     
                     <div class="schedule-row">
                         <span>Check every</span>
-                        <input type="number" value="5" name="interval" class="schedule-input" min="1" max="1440" id="scheduleInterval">
-                        <select class="schedule-select" name="unit" id="scheduleUnit">
+                        <input type="number" value="{{ old('interval', '5') }}" name="interval" class="schedule-input" min="1" max="1440" id="scheduleInterval">
+                        <select class="form-select" name="unit" id="scheduleUnit" style="min-width: 120px;">
                             <option value="minutes">minutes</option>
                             <option value="hours">hours</option>
                             <option value="days">days</option>
@@ -588,7 +718,7 @@
                             <div class="form-group">
                                 <label class="form-label">Email Integration</label>
                                 <div class="form-description">Select a pre-configured email integration or choose "Custom" to enter manual settings.</div>
-                                <select id="emailIntegrationSelect" name="emailIntegration" class="form-input" onchange="handleEmailIntegrationChange()">
+                                <select id="emailIntegrationSelect" name="emailIntegration" class="form-select" onchange="handleEmailIntegrationChange()">
                                     <option value="">Select an integration...</option>
                                     <option value="custom">Custom Settings</option>
                                     @php
@@ -693,13 +823,13 @@
 
                 <!-- Action Buttons -->
                 <div class="action-buttons">
-                    <a href="{{ route('elasticsearch.index') }}" class="btn btn-secondary">
+                    <a href="{{ route('elasticsearch.index') }}" style="text-decoration: none;" class="btn btn-secondary">
                         Cancel
                     </a>
-                    <button type="submit" class="btn btn-primary">
-                        Generate Rule
+                    <button type="submit" id="generateRuleBtn" class="btn btn-primary btn-generate">
+                        Generate ElastAlert Rule
                     </button>
-                    <button type="submit" formaction="{{ route('elasticsearch.print-rule.post') }}" formmethod="POST" class="btn btn-primary">
+                    <button type="submit" id="reviewConfigBtn" formaction="{{ route('elasticsearch.print-rule.post') }}" formmethod="POST" class="btn btn-primary btn-review">
                         Review Configuration
                     </button>
                 </div>
@@ -708,7 +838,7 @@
     </div>
 
     <script>
-        // Auto-resize textareas - this is essential for UX
+        // Auto-resize textareas
         function autoResize(textarea) {
             textarea.style.height = 'auto';
             textarea.style.height = textarea.scrollHeight + 'px';
@@ -719,89 +849,104 @@
             textarea.addEventListener('input', function() {
                 autoResize(this);
             });
-            
-            // Initial resize
             autoResize(textarea);
         });
 
-        // Action selection function - simplified to just handle UI state
+        // Action selection function
         function selectAction(action) {
-            // Clear previous selections
             document.querySelectorAll('.action-card').forEach(card => {
                 card.classList.remove('selected');
             });
             
-            // Hide all action sections
             document.getElementById('emailIntegrationSection').style.display = 'none';
             
             if (action === 'email') {
-                // Mark email card as selected
                 document.getElementById('emailActionCard').classList.add('selected');
                 document.getElementById('selectedAction').value = 'email';
                 document.getElementById('enableEmailAction').value = 'true';
-                
-                // Show email integration section
                 document.getElementById('emailIntegrationSection').style.display = 'block';
             } else {
                 document.getElementById('selectedAction').value = '';
                 document.getElementById('enableEmailAction').value = 'false';
-                
-                if (action === 'slack' || action === 'discord') {
-                    // Show coming soon message for disabled actions
-                    alert(`${action.charAt(0).toUpperCase() + action.slice(1)} integration is coming soon!`);
-                }
             }
         }
 
-        // Email integration change handler - simplified for form submission
+        // Email integration change handler
         function handleEmailIntegrationChange() {
             const select = document.getElementById('emailIntegrationSelect');
+            if (!select) return;
+            
             const selectedValue = select.value;
             
-            // Hide all sub-sections
-            document.getElementById('selectedIntegrationDisplay').style.display = 'none';
-            document.getElementById('customEmailFields').style.display = 'none';
-            document.getElementById('integrationRecipientField').style.display = 'none';
+            // Get all elements that need to be controlled
+            const integrationDisplay = document.getElementById('selectedIntegrationDisplay');
+            const customFields = document.getElementById('customEmailFields');
+            const recipientField = document.getElementById('integrationRecipientField');
+            const emailType = document.getElementById('emailType');
+            const integrationId = document.getElementById('integrationId');
+            const integrationName = document.getElementById('integrationName');
+            
+            // Hide all sections first
+            if (integrationDisplay) integrationDisplay.style.display = 'none';
+            if (customFields) customFields.style.display = 'none';
+            if (recipientField) recipientField.style.display = 'none';
+            
+            // Clear hidden field values
+            if (emailType) emailType.value = '';
+            if (integrationId) integrationId.value = '';
+            if (integrationName) integrationName.value = '';
             
             if (selectedValue === 'custom') {
                 // Show custom email fields
-                document.getElementById('customEmailFields').style.display = 'block';
-                document.getElementById('emailType').value = 'custom';
-                document.getElementById('integrationId').value = '';
-                document.getElementById('integrationName').value = '';
+                if (customFields) customFields.style.display = 'block';
+                if (emailType) emailType.value = 'custom';
             } else if (selectedValue && selectedValue !== '') {
-                // Show selected integration
-                const selectedOption = select.options[select.selectedIndex];
-                const integration = JSON.parse(selectedOption.dataset.integration);
-                
-                displaySelectedIntegration(integration);
-                document.getElementById('selectedIntegrationDisplay').style.display = 'block';
-                document.getElementById('integrationRecipientField').style.display = 'block';
-                
-                // Set hidden fields
-                document.getElementById('emailType').value = 'integration';
-                document.getElementById('integrationId').value = integration.id;
-                document.getElementById('integrationName').value = integration.name;
-                
-                // Pre-fill recipient field with default if available
-                const recipientField = document.getElementById('integrationEmailRecipient');
-                if (integration.default_recipient) {
-                    recipientField.value = integration.default_recipient;
+                // Handle integration selection
+                try {
+                    const selectedOption = select.options[select.selectedIndex];
+                    const integrationData = selectedOption.getAttribute('data-integration');
+                    
+                    if (integrationData) {
+                        const integration = JSON.parse(integrationData);
+                        
+                        // Display integration details
+                        displaySelectedIntegration(integration);
+                        if (integrationDisplay) integrationDisplay.style.display = 'block';
+                        if (recipientField) recipientField.style.display = 'block';
+                        
+                        // Set hidden field values
+                        if (emailType) emailType.value = 'integration';
+                        if (integrationId) integrationId.value = integration.id;
+                        if (integrationName) integrationName.value = integration.name;
+                        
+                        // Pre-fill recipient field
+                        const emailRecipientField = document.getElementById('integrationEmailRecipient');
+                        if (emailRecipientField && integration.default_recipient) {
+                            emailRecipientField.value = integration.default_recipient;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error parsing integration data:', error);
+                    // Fallback to custom settings if parsing fails
+                    if (customFields) customFields.style.display = 'block';
+                    if (emailType) emailType.value = 'custom';
                 }
-            } else {
-                // Clear values
-                document.getElementById('emailType').value = '';
-                document.getElementById('integrationId').value = '';
-                document.getElementById('integrationName').value = '';
             }
         }
 
         // Display selected integration details
         function displaySelectedIntegration(integration) {
-            document.getElementById('integrationName').textContent = integration.name;
-            document.getElementById('integrationSmtpHost').textContent = integration.smtp_host;
-            document.getElementById('integrationSmtpPort').textContent = integration.smtp_port;
-            document.getElementById('integrationFromAddress').textContent = integration.from_address;
+            if (!integration) return;
+            
+            const nameElement = document.getElementById('integrationName');
+            const hostElement = document.getElementById('integrationSmtpHost');
+            const portElement = document.getElementById('integrationSmtpPort');
+            const fromElement = document.getElementById('integrationFromAddress');
+            
+            if (nameElement) nameElement.textContent = integration.name || 'Unknown';
+            if (hostElement) hostElement.textContent = integration.smtp_host || 'Not specified';
+            if (portElement) portElement.textContent = integration.smtp_port || 'Not specified';
+            if (fromElement) fromElement.textContent = integration.from_address || 'Not specified';
         }
     </script>
 </body>

@@ -11,7 +11,8 @@ use App\Models\EmailIntegration;
 
 class AIController extends Controller
 {
-    private $rulesPath = '/home/sefaubuntu/elastic-alert-bridge/config/elastalert/rules';
+    // private $rulesPath = '/home/sefaubuntu/elastic-alert-bridge/config/elastalert/rules';
+    private $rulesPath = '/home/sefaubuntu/elastic-alert-bridge/api/app/Services/elastalert2/rules';
     private $integrationAuthPath = '/home/sefaubuntu/elastic-alert-bridge/api/app/Services/elastalert2/rules';
 
     private function findIntegrationAuthFile($integrationId)
@@ -68,6 +69,14 @@ class AIController extends Controller
             }
         }
 
+        // Prepare variables for the YAML template
+        $emailRecipient = $formData['email_recipient'] ?? 'recipient@example.com';
+        $smtpHost = $formData['smtp_host'] ?? 'smtp.example.com';
+        $smtpPort = $formData['smtp_port'] ?? '587';
+        $smtpSsl = ($formData['smtp_ssl'] ?? false) ? 'true' : 'false';
+        $fromAddress = $formData['from_address'] ?? 'noreply@example.com';
+        $queryString = $kqlSyntax ?: '*';
+
         $prompt .= <<<YAML
 
 
@@ -84,21 +93,21 @@ class AIController extends Controller
         
         filter:
           - query_string:
-              query: "{$kqlSyntax}"
+              query: "{$queryString}"
         
         alert:
           - email
         
         # ── ✉️  E-mail settings ──────────────────────
         email:
-          - {$formData['email_recipient'] ?? 'recipient@example.com'}
+          - {$emailRecipient}
         
-        smtp_host: {$formData['smtp_host'] ?? 'smtp.example.com'}
-        smtp_port: {$formData['smtp_port'] ?? '587'}
-        smtp_ssl: {(($formData['smtp_ssl'] ?? false) ? 'true' : 'false')}
+        smtp_host: {$smtpHost}
+        smtp_port: {$smtpPort}
+        smtp_ssl: {$smtpSsl}
         smtp_auth_file: "{$smtpAuthFilePath}"
         
-        from_addr: {$formData['from_address'] ?? 'noreply@example.com'}
+        from_addr: {$fromAddress}
         
         email_format: html
         
@@ -122,9 +131,7 @@ class AIController extends Controller
           • Total Matches: {2}
           • Latest Event Time: {4}
           • Rule Type: {5}
-        
-          \n
-            - Error Message: {6}
+          - Error: {6}
         
           🔍 Investigation Links:
           ↗️ Check Kibana Dashboard
@@ -149,7 +156,7 @@ class AIController extends Controller
         3. ONLY use reliable ElastAlert variables in alert_text_args (rule.name, rule.index, num_matches, rule.timeframe, @timestamp, rule.type)
         4. DO NOT use custom variables like ALERT_LABEL, RULE_NAME, TIME_UNIT as they cause KeyError
         5. Make sure the number of placeholders {0}, {1}, etc. in alert_text matches the number of alert_text_args (exactly 6 arguments)
-        6. Do not use '`' only give raw YAML output
+        6. Do not use backticks, only give raw YAML output
         7. Ensure proper email formatting with clear sections and readable layout
         8. Use HTML-friendly formatting since email_format is set to html
         9. Ensure no unnecessary fields are left blank
@@ -166,11 +173,11 @@ class AIController extends Controller
             $prompt .= <<<EMAIL
         
         Email Action Details (if an email alert type is appropriate for the rule):
-        Recipient Email(s): {$formData['email_recipient'] ?? 'N/A'}
-        SMTP Host: {$formData['smtp_host'] ?? 'N/A'}
-        SMTP Port: {$formData['smtp_port'] ?? 'N/A'}
-        SMTP SSL: {(($formData['smtp_ssl'] ?? false) ? 'Yes' : 'No')}
-        From Address: {$formData['from_address'] ?? 'N/A'}
+        Recipient Email(s): {$emailRecipient}
+        SMTP Host: {$smtpHost}
+        SMTP Port: {$smtpPort}
+        SMTP SSL: {$smtpSsl}
+        From Address: {$fromAddress}
         SMTP Username: {$smtpUsername}
         {$authNote}SMTP Auth File Path (for rule configuration): {$smtpAuthFilePath}
         
@@ -183,7 +190,7 @@ class AIController extends Controller
     //
     public function generateRule(Request $request)
     {
-        // Get basic form data
+        // Get basic form data - map form field names to expected names
         $formData = [
             'rule_name' => $request->get('ruleName', ''),
             'elasticsearch_index' => $request->get('index', ''),
@@ -192,7 +199,7 @@ class AIController extends Controller
             'schedule_interval' => $request->get('interval', '5'),
             'schedule_unit' => $request->get('unit', 'minutes'),
             'submitted_at' => now()->toDateTimeString(),
-            'enable_email_action' => $request->boolean('enableEmailAction'),
+            'enable_email_action' => $request->boolean('enableEmailAction') || $request->get('selectedAction') === 'email',
         ];
 
         // Handle email configuration based on type
@@ -203,14 +210,20 @@ class AIController extends Controller
             if ($emailType === 'integration') {
                 // Get email configuration from database integration
                 $integrationId = $request->get('integrationId');
+                
+                if (empty($integrationId)) {
+                    return back()->withErrors(['error' => 'Integration ID is required when using email integration.'])->withInput();
+                }
+                
                 $integration = EmailIntegration::find($integrationId);
                 
                 if (!$integration) {
-                    return response()->json(['success' => false, 'error' => 'Email integration not found.'], 400);
+                    return back()->withErrors(['error' => 'Email integration not found.'])->withInput();
                 }
                 
                 $formData['integration_id'] = $integrationId;
-                $formData['email_recipient'] = $request->get('emailRecipient', $integration->default_recipient ?? '');
+                // Use integrationEmailRecipient field for integration type, fallback to default
+                $formData['email_recipient'] = $request->get('integrationEmailRecipient', $integration->default_recipient ?? '');
                 $formData['smtp_host'] = $integration->smtp_host;
                 $formData['smtp_port'] = $integration->smtp_port;
                 $formData['smtp_ssl'] = $integration->smtp_ssl;
@@ -228,20 +241,32 @@ class AIController extends Controller
                 $formData['smtp_username'] = $request->get('smtpUsername', '');
                 $formData['smtp_password'] = $request->get('smtpPassword', '');
             }
+            
+            // Validate email recipient is provided
+            if (empty($formData['email_recipient'])) {
+                return back()->withErrors(['error' => 'Email recipient is required when email action is enabled.'])->withInput();
+            }
         }
 
         if (empty($formData['rule_name'])) {
-            return response()->json(['success' => false, 'error' => 'Rule Name is required.'], 400);
+            return back()->withErrors(['error' => 'Rule Name is required.'])->withInput();
         }
         if (empty($formData['alert_prompt'])) {
-            return response()->json(['success' => false, 'error' => 'Alert Requirements (prompt) is required.'], 400);
+            return back()->withErrors(['error' => 'Alert Requirements (prompt) is required.'])->withInput();
         }
 
         $geminiPrompt = $this->prepareEmailPrompt($formData);
         
         Log::info("Gemini Prompt for rule '{$formData['rule_name']}':\n{$geminiPrompt}");
 
-        $apiKey = '';
+        // Get API key from environment or config
+        $apiKey = env('GEMINI_API_KEY', config('services.gemini.api_key', ''));
+        
+        if (empty($apiKey)) {
+            Log::error('Gemini API key is not configured');
+            return back()->withErrors(['error' => 'AI service is not properly configured. Please contact administrator.'])->withInput();
+        }
+        
         $geminiApiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=' . $apiKey;
         $generatedYamlContent = null;
 
@@ -256,19 +281,19 @@ class AIController extends Controller
                 $generatedYamlContent = data_get($responseData, 'candidates.0.content.parts.0.text');
                 if (empty($generatedYamlContent)) {
                     Log::error('Gemini API success but no content generated.', ['response' => $responseData]);
-                    return response()->json(['success' => false, 'error' => 'Gemini API returned an empty response.', 'details' => $responseData], 500);
+                    return back()->withErrors(['error' => 'AI service returned an empty response. Please try again.'])->withInput();
                 }
                 Log::info("Gemini Response for rule '{$formData['rule_name']}':\n{$generatedYamlContent}");
             } else {
                 Log::error('Gemini API call failed.', ['status' => $apiResponse->status(), 'response' => $apiResponse->body()]);
-                return response()->json(['success' => false, 'error' => 'Gemini API call failed.', 'details' => $apiResponse->json() ?: $apiResponse->body()], $apiResponse->status());
+                return back()->withErrors(['error' => 'AI service is currently unavailable. Please try again later.'])->withInput();
             }
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
             Log::error('Gemini API Connection Exception.', ['message' => $e->getMessage()]);
-            return response()->json(['success' => false, 'error' => 'Could not connect to Gemini API. ' . $e->getMessage()], 500);
+            return back()->withErrors(['error' => 'Could not connect to AI service. Please check your internet connection.'])->withInput();
         } catch (\Exception $e) {
             Log::error('General Exception calling Gemini API.', ['message' => $e->getMessage()]);
-            return response()->json(['success' => false, 'error' => 'An unexpected error occurred while calling Gemini API: ' . $e->getMessage()], 500);
+            return back()->withErrors(['error' => 'An unexpected error occurred while generating the rule. Please try again.'])->withInput();
         }
 
         $safeRuleName = Str::slug($formData['rule_name']);
@@ -284,8 +309,7 @@ class AIController extends Controller
             $yamlFileStatus = $yamlFileName . ' created successfully.';
         } catch (\Exception $e) {
             Log::error("Failed to write YAML rule file: {$yamlFileName}", ['message' => $e->getMessage()]);
-            $yamlFileStatus = "Error creating {$yamlFileName}: " . $e->getMessage();
-            return response()->json(['success' => false, 'error' => $yamlFileStatus, 'gemini_output' => $generatedYamlContent], 500);
+            return back()->withErrors(['error' => 'Failed to save the rule file. Please check file permissions.'])->withInput();
         }
 
         $smtpAuthFilePath = $this->rulesPath . DIRECTORY_SEPARATOR . 'smtp_auth_file.txt';
@@ -312,21 +336,11 @@ class AIController extends Controller
             }
         }
 
+        // Success - redirect to rules page with success message
         $redirectUrl = route('elasticsearch.rules', ['selected_file' => $yamlFileName]);
+        $successMessage = 'ElastAlert rule "' . $formData['rule_name'] . '" generated successfully and saved as ' . $yamlFileName . '!';
         
-        $responsePayload = [
-            'success' => true,
-            'message' => 'ElastAlert rule generated by AI and saved as ' . $yamlFileName . '!',
-            'redirect_url' => $redirectUrl,
-            'rule_file' => $yamlFileName,
-            'yaml_file_status' => $yamlFileStatus
-        ];
-        if ($smtpAuthFileStatus) {
-            $responsePayload['smtp_auth_file_status'] = $smtpAuthFileStatus;
-            $responsePayload['smtp_auth_file_path'] = $smtpAuthFilePath;
-        }
-
-        return response()->json($responsePayload);
+        return redirect($redirectUrl)->with('success', $successMessage);
     }
 
     
