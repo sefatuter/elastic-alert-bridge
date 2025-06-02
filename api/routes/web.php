@@ -9,6 +9,7 @@ use App\Http\Controllers\AIController;
 use App\Http\Controllers\IndexController;
 use App\Http\Controllers\IntegrationsController;
 use App\Http\Controllers\RuleController;
+use App\Http\Controllers\DeployController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -30,6 +31,12 @@ Route::get('/api/elasticsearch/data', [IndexController::class, 'getIndexData'])-
 Route::get('/elasticsearch/rules', [RuleController::class, 'showRulesPage'])->name('elasticsearch.rules');
 Route::get('/api/elasticsearch/rules/list', [RuleController::class, 'listRuleFiles'])->name('api.elasticsearch.rules.list');
 Route::get('/api/elasticsearch/rules/content', [RuleController::class, 'getRuleFileContent'])->name('api.elasticsearch.rules.content');
+
+// Deploy Controller for ElastAlert control
+Route::get('/api/elastalert/status', [DeployController::class, 'getStatus'])->name('api.elastalert.status');
+Route::post('/elastalert/start', [DeployController::class, 'start'])->name('elastalert.start');
+Route::post('/elastalert/stop', [DeployController::class, 'stop'])->name('elastalert.stop');
+Route::post('/elastalert/restart', [DeployController::class, 'restart'])->name('elastalert.restart');
 
 // Integrations routes
 Route::get('/elasticsearch/integrations', [IntegrationsController::class, 'index'])->name('elasticsearch.integrations');

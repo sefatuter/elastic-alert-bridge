@@ -113,6 +113,111 @@
             text-align: center;
             margin-top: 40px;
         }
+        .control-panel {
+            background: #ffffff;
+            border-bottom: 1px solid #d3dae6;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .control-left {
+            flex-grow: 1;
+        }
+        .control-right {
+            flex-grow: 1;
+            text-align: right;
+        }
+        .control-buttons {
+            display: inline-flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .control-btn {
+            background: #006bb4;
+            color: #ffffff;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .control-btn:hover {
+            background: #005a9e;
+        }
+        
+        .start-btn {
+            background: #28a745;
+        }
+        
+        .start-btn:hover {
+            background: #218838;
+        }
+        
+        .stop-btn {
+            background: #dc3545;
+        }
+        
+        .stop-btn:hover {
+            background: #c82333;
+        }
+        
+        .restart-btn {
+            background: #17a2b8;
+        }
+        
+        .restart-btn:hover {
+            background: #138496;
+        }
+        
+        .status-display {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-label {
+            font-weight: 600;
+        }
+        
+        .status-indicator {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            background: #f8f9fa;
+            color: #6c757d;
+        }
+        
+        .status-running {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-stopped {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .message {
+            padding: 16px 24px;
+            margin: 0;
+            border-radius: 0;
+            font-weight: 500;
+        }
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border-bottom: 1px solid #c3e6cb;
+        }
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border-bottom: 1px solid #f5c6cb;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
     </style>
 </head>
 <body>
@@ -123,6 +228,47 @@
         </a>
         <h1 class="rules-title">ElastAlert Rules</h1>
     </div>
+
+    <!-- ElastAlert Control Panel -->
+    <div class="control-panel">
+        <div class="control-left">
+            <h3>ElastAlert Control</h3>
+            <div class="control-buttons">
+                <form method="POST" action="{{ route('elastalert.start') }}" style="display: inline;">
+                    @csrf
+                    <button type="submit" class="control-btn start-btn">Start</button>
+                </form>
+                <form method="POST" action="{{ route('elastalert.stop') }}" style="display: inline;">
+                    @csrf
+                    <button type="submit" class="control-btn stop-btn">Stop</button>
+                </form>
+                <form method="POST" action="{{ route('elastalert.restart') }}" style="display: inline;">
+                    @csrf
+                    <button type="submit" class="control-btn restart-btn">Restart</button>
+                </form>
+            </div>
+        </div>
+        <div class="control-right">
+            <div class="status-display">
+                <span class="status-label">Status:</span>
+                <span id="statusIndicator" class="status-indicator">Loading...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success/Error Messages -->
+    @if (session('success'))
+        <div class="message success-message">
+            {{ session('success') }}
+        </div>
+    @endif
+
+    @if (session('error'))
+        <div class="message error-message">
+            {{ session('error') }}
+        </div>
+    @endif
+
     <div class="rules-container">
         <div class="rules-sidebar">
             <h3>Rule Files</h3>
@@ -252,6 +398,45 @@
             }
 
             loadRuleFiles();
+            
+            // ElastAlert Status Checking
+            function updateStatus() {
+                const statusIndicator = document.getElementById('statusIndicator');
+                
+                fetch('{{ route("api.elastalert.status") }}')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        statusIndicator.className = 'status-indicator';
+                        if (data.status === 'running') {
+                            statusIndicator.classList.add('status-running');
+                            statusIndicator.textContent = 'Running';
+                            if (data.pid) {
+                                statusIndicator.title = `PID: ${data.pid}`;
+                            }
+                        } else {
+                            statusIndicator.classList.add('status-stopped');
+                            statusIndicator.textContent = 'Stopped';
+                            statusIndicator.title = '';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Status check failed:', error);
+                        statusIndicator.className = 'status-indicator';
+                        statusIndicator.textContent = 'Error';
+                        statusIndicator.title = `Error: ${error.message}`;
+                    });
+            }
+            
+            // Check status on page load
+            updateStatus();
+            
+            // Check status every 30 seconds
+            setInterval(updateStatus, 30000);
         });
     </script>
 </body>
