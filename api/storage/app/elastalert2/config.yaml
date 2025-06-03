@@ -1,0 +1,43 @@
+# config.yaml
+
+# 1) Elasticsearch connection
+es_host: localhost
+es_port: 9200
+es_username: elastic  # Add if you have authentication
+es_password: ""      # Add if you have authentication
+es_auth_type: basic
+use_ssl: false
+verify_certs: false 
+
+# 2) ElastAlert writeback index
+writeback_index: elastalert_status
+
+# 3) Where your rule files live
+rules_folder: rules
+
+# 4) When to run - Check every 30 seconds for testing
+run_every:
+  seconds: 30
+
+# How far back to look for events in each run - Look back 1 minute
+buffer_time:
+  minutes: 1
+
+# 5) Default timestamp field in your docs
+timestamp_field: "@timestamp"
+
+# 6) Alert settings
+alert_text_type: alert_text_only
+
+# 7) Debug mode for testing
+debug: true
+
+# 8) Logging settings
+log_level: info
+log_file: elastalert.log
+
+# 9) Maximum number of alerts to send per rule
+max_query_size: 1000
+
+# 10) Time to wait before retrying on failure
+retry_after: 30

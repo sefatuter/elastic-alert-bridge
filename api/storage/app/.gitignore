@@ -2,3 +2,8 @@
 !private/
 !public/
 !.gitignore
+!elastalert2/
+!elastalert2/rules/
+!elastalert2/config.yaml
+!elastalert2/elastalert.log
+!elastalert2/confs.md

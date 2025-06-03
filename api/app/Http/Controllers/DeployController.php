@@ -16,8 +16,8 @@ class DeployController extends Controller
 
     public function __construct()
     {
-
-        $baseUserPath = '/home/sefaubuntu/elastic-alert-bridge/api/app/Services/elastalert2'; // Example base
+        // Use storage_path() helper to get the correct storage path
+        $baseUserPath = storage_path('app/elastalert2');
 
         $this->elastalertPath = rtrim($baseUserPath, '/');
         $this->venvPath = $this->elastalertPath . '/venv';

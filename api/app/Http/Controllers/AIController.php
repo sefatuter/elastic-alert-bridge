@@ -11,9 +11,14 @@ use App\Models\EmailIntegration;
 
 class AIController extends Controller
 {
-    // private $rulesPath = '/home/sefaubuntu/elastic-alert-bridge/config/elastalert/rules';
-    private $rulesPath = '/home/sefaubuntu/elastic-alert-bridge/api/app/Services/elastalert2/rules';
-    private $integrationAuthPath = '/home/sefaubuntu/elastic-alert-bridge/api/app/Services/elastalert2/rules';
+    private $rulesPath;
+    private $integrationAuthPath;
+
+    public function __construct()
+    {
+        $this->rulesPath = storage_path('app/elastalert2/rules');
+        $this->integrationAuthPath = storage_path('app/elastalert2/rules');
+    }
 
     private function findIntegrationAuthFile($integrationId)
     {

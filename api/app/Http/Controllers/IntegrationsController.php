@@ -8,6 +8,15 @@ use App\Models\EmailIntegration;
 
 class IntegrationsController extends Controller
 {
+    private $rulesPath;
+    private $integrationAuthPath;
+
+    public function __construct()
+    {
+        $this->rulesPath = base_path('storage/app/elastalert2/rules');
+        $this->integrationAuthPath = base_path('storage/app/elastalert2/rules');
+    }
+
     public function index()
     {
         return view('elasticsearch.integrations');
@@ -58,7 +67,7 @@ class IntegrationsController extends Controller
             );
 
             // Create SMTP auth file using the integration ID
-            $authFilePath = '/home/sefaubuntu/elastic-alert-bridge/api/app/Services/elastalert2/rules';
+            $authFilePath = $this->rulesPath;
             
             // Ensure directory exists
             if (!is_dir($authFilePath)) {
@@ -144,9 +153,6 @@ class IntegrationsController extends Controller
             return response()->json(['success' => false, 'error' => 'Failed to get email integrations'], 500);
         }
     }
-
-    private $rulesPath = '/home/sefaubuntu/elastic-alert-bridge/api/app/Services/elastalert2/rules';
-    private $integrationAuthPath = '/home/sefaubuntu/elastic-alert-bridge/api/app/Services/elastalert2/rules';
 
     private function findIntegrationAuthFile($integrationId)
     {
@@ -235,7 +241,7 @@ class IntegrationsController extends Controller
                 
             } else {
                 // Custom email configuration
-                $smtpAuthFilePath = '/home/sefaubuntu/elastic-alert-bridge/config/elastalert/rules/smtp_auth_file.txt';
+                $smtpAuthFilePath = base_path('storage/app/elastalert2/rules/smtp_auth_file.txt');
                 
                 $output .= "Recipient Email(s): " . ($request->get('emailRecipient', '') ?: 'N/A') . "\n";
                 $output .= "SMTP Host: " . ($request->get('smtpHost', '') ?: 'N/A') . "\n";

@@ -11,7 +11,12 @@ use App\Models\EmailIntegration;
 
 class ElasticsearchController extends Controller
 {
-    private $integrationAuthPath = '/home/sefaubuntu/elastic-alert-bridge/api/app/Services/elastalert2/rules';
+    private $integrationAuthPath;
+
+    public function __construct()
+    {
+        $this->integrationAuthPath = base_path('storage/app/elastalert2/rules');
+    }
 
     // Helper method to find the correct SMTP auth file for an integration
     private function findIntegrationAuthFile($integrationId)
