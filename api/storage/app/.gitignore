@@ -7,3 +7,5 @@
 !elastalert2/config.yaml
 !elastalert2/elastalert.log
 !elastalert2/confs.md
+!elastalert2/logs/.gitignore
+!elastalert2/logs/

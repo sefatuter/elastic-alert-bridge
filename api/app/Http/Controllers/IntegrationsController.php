@@ -13,8 +13,8 @@ class IntegrationsController extends Controller
 
     public function __construct()
     {
-        $this->rulesPath = base_path('storage/app/elastalert2/rules');
-        $this->integrationAuthPath = base_path('storage/app/elastalert2/rules');
+        $this->rulesPath = storage_path('app/elastalert2/rules');
+        $this->integrationAuthPath = storage_path('app/elastalert2/rules');
     }
 
     public function index()
@@ -145,9 +145,28 @@ class IntegrationsController extends Controller
     public function getEmailIntegrations()
     {
         try {
-            $integrations = EmailIntegration::all(['id', 'name', 'smtp_host', 'smtp_port', 'smtp_ssl', 'from_address', 'default_recipient']);
+            $integrations = EmailIntegration::all(); // Get all integrations first
+            $deletedCount = 0;
+
+            foreach ($integrations as $integration) {
+                $authFileName = "smtp_auth_file{$integration->id}.txt";
+                $authFileFullPath = $this->integrationAuthPath . DIRECTORY_SEPARATOR . $authFileName;
+
+                if (!file_exists($authFileFullPath)) {
+                    Log::info("SMTP auth file \'\'\'{$authFileName}\'\'\' not found for integration \'\'\'{$integration->name}\'\'\' (ID: {$integration->id}). Deleting integration.");
+                    $integration->delete();
+                    $deletedCount++;
+                }
+            }
+
+            if ($deletedCount > 0) {
+                Log::info("Deleted {$deletedCount} email integrations due to missing auth files.");
+            }
+
+            // Re-fetch the integrations after potential deletions
+            $currentIntegrations = EmailIntegration::all(['id', 'name', 'smtp_host', 'smtp_port', 'smtp_ssl', 'from_address', 'default_recipient']);
             
-            return response()->json(['success' => true, 'integrations' => $integrations]);
+            return response()->json(['success' => true, 'integrations' => $currentIntegrations]);
         } catch (\Exception $e) {
             Log::error('Failed to get email integrations: ' . $e->getMessage());
             return response()->json(['success' => false, 'error' => 'Failed to get email integrations'], 500);
@@ -241,7 +260,7 @@ class IntegrationsController extends Controller
                 
             } else {
                 // Custom email configuration
-                $smtpAuthFilePath = base_path('storage/app/elastalert2/rules/smtp_auth_file.txt');
+                $smtpAuthFilePath = storage_path('app/elastalert2/rules/smtp_auth_file.txt');
                 
                 $output .= "Recipient Email(s): " . ($request->get('emailRecipient', '') ?: 'N/A') . "\n";
                 $output .= "SMTP Host: " . ($request->get('smtpHost', '') ?: 'N/A') . "\n";

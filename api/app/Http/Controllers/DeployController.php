@@ -12,17 +12,16 @@ class DeployController extends Controller
     private $pidFile;        
     private $logFile;     
     private $configFile;    
-    private $elastalertExecutable; // Full path to the elastalert executable in the venv
+    private $elastalertExecutable;
 
     public function __construct()
     {
-        // Use storage_path() helper to get the correct storage path
         $baseUserPath = storage_path('app/elastalert2');
 
         $this->elastalertPath = rtrim($baseUserPath, '/');
         $this->venvPath = $this->elastalertPath . '/venv';
-        $this->pidFile = $this->elastalertPath . '/elastalert.pid';
-        $this->logFile = $this->elastalertPath . '/elastalert.log';
+        $this->pidFile = $this->elastalertPath . '/logs/elastalert.pid';
+        $this->logFile = $this->elastalertPath . '/logs/elastalert.log';
         $this->configFile = $this->elastalertPath . '/config.yaml';
         $this->elastalertExecutable = $this->venvPath . '/bin/elastalert';
     }

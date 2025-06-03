@@ -3,8 +3,8 @@
 # 1) Elasticsearch connection
 es_host: localhost
 es_port: 9200
-es_username: elastic  # Add if you have authentication
-es_password: ""      # Add if you have authentication
+es_username: elastic
+es_password: "${ELASTICSEARCH_PASSWORD}"
 es_auth_type: basic
 use_ssl: false
 verify_certs: false 

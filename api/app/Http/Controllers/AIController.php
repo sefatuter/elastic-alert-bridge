@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 use App\Models\EmailIntegration;
 
-class AIController extends Controller
+class AIController extends Controller 
 {
     private $rulesPath;
     private $integrationAuthPath;

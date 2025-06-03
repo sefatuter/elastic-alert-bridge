@@ -25,7 +25,7 @@ elastic-alert-bridge/
 
 1. Clone the repository
    ```bash
-   git clone https://github.com/yourusername/elastic-alert-bridge.git
+   git clone https://github.com/sefatuter/elastic-alert-bridge.git
    cd elastic-alert-bridge
    ```
 
