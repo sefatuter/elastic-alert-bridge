@@ -61,6 +61,10 @@
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23006bb4'%3E%3Cpath d='M20,8L12,13L4,8V6L12,11L20,6M20,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6C22,4.89 21.1,4 20,4Z'/%3E%3C/svg%3E");
         }
 
+        .icon-slack {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23006bb4'%3E%3Cpath d='M6.527,14.514c0,1.324-1.074,2.398-2.398,2.398s-2.398-1.074-2.398-2.398s1.074-2.398,2.398-2.398h2.398V14.514z M7.727,14.514c0-1.324,1.074-2.398,2.398-2.398s2.398,1.074,2.398,2.398v6.028c0,1.324-1.074,2.398-2.398,2.398s-2.398-1.074-2.398-2.398V14.514z M10.125,6.527c-1.324,0-2.398-1.074-2.398-2.398s1.074-2.398,2.398-2.398s2.398,1.074,2.398,2.398v2.398H10.125z M10.125,7.727c1.324,0,2.398,1.074,2.398,2.398s-1.074,2.398-2.398,2.398H4.097c-1.324,0-2.398-1.074-2.398-2.398s1.074-2.398,2.398-2.398H10.125z M17.473,10.125c0-1.324,1.074-2.398,2.398-2.398s2.398,1.074,2.398,2.398s-1.074,2.398-2.398,2.398h-2.398V10.125z M16.273,10.125c0,1.324-1.074,2.398-2.398,2.398s-2.398-1.074-2.398-2.398V4.097c0-1.324,1.074-2.398,2.398-2.398s2.398,1.074,2.398,2.398V10.125z M13.875,17.473c1.324,0,2.398,1.074,2.398,2.398s-1.074,2.398-2.398,2.398s-2.398-1.074-2.398-2.398v-2.398H13.875z M13.875,16.273c-1.324,0-2.398-1.074-2.398-2.398s1.074-2.398,2.398-2.398h6.028c1.324,0,2.398,1.074,2.398,2.398s-1.074,2.398-2.398,2.398H13.875z'/%3E%3C/svg%3E");
+        }
+
         .icon-edit {
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23006bb4'%3E%3Cpath d='M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z'/%3E%3C/svg%3E");
         }
@@ -405,17 +409,38 @@
                     Integration Types
                 </h3>
                 <ul class="integrations-types">
-                    <li class="integration-type active" data-type="email">
+                    <li class="integration-type active" data-type="email" onclick="showIntegrationType('email')">
                         <span class="icon icon-email"></span>
                         Email / SMTP
+                    </li>
+                    <li class="integration-type" data-type="slack" onclick="showIntegrationType('slack')">
+                        <span class="icon icon-slack"></span>
+                        Slack
                     </li>
                 </ul>
             </div>
 
             <!-- Content Area -->
             <div class="integrations-content">
+                @php
+                    $emailIntegrations = collect();
+                    $slackIntegrations = collect();
+                    
+                    try {
+                        if (class_exists('\App\Models\EmailIntegration')) {
+                            $emailIntegrations = \App\Models\EmailIntegration::all();
+                        }
+                        if (class_exists('\App\Models\SlackIntegration')) {
+                            $slackIntegrations = \App\Models\SlackIntegration::all();
+                        }
+                    } catch (\Exception $e) {
+                        // Keep empty collections on error
+                        \Log::error('Integration loading error: ' . $e->getMessage());
+                    }
+                @endphp
+
                 <div class="content-header">
-                    <h2 class="content-title">Email / SMTP Integrations</h2>
+                    <h2 class="content-title" id="pageTitle">Email / SMTP Integrations</h2>
                     <button class="back-button" onclick="showAddForm()">
                         <span class="icon icon-add"></span>
                         Add Integration
@@ -423,254 +448,291 @@
                 </div>
 
                 <!-- Alert Messages -->
-                <div id="alertContainer"></div>
-
-                <!-- Integration Form -->
-                <div class="integration-form" id="integrationForm">
-                    <form id="emailIntegrationForm">
-                        <div class="form-group">
-                            <label class="form-label" for="integrationName">Integration Name *</label>
-                            <input type="text" class="form-input" id="integrationName" name="name" placeholder="e.g., Company SMTP Server" required>
+                <div id="alertContainer">
+                    @if(session('success'))
+                        <div class="alert success">{{ session('success') }}</div>
+                    @endif
+                    @if(session('error'))
+                        <div class="alert error">{{ session('error') }}</div>
+                    @endif
+                    @if($errors->any())
+                        <div class="alert error">
+                            @foreach($errors->all() as $error)
+                                {{ $error }}<br>
+                            @endforeach
                         </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="smtpHost">SMTP Host *</label>
-                            <input type="text" class="form-input" id="smtpHost" name="smtp_host" placeholder="e.g., smtp.gmail.com" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="smtpPort">SMTP Port *</label>
-                            <input type="number" class="form-input" id="smtpPort" name="smtp_port" placeholder="e.g., 587" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="smtpUsername">SMTP Username *</label>
-                            <input type="text" class="form-input" id="smtpUsername" name="smtp_username" placeholder="e.g., your-email@company.com" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="smtpPassword">SMTP Password *</label>
-                            <input type="password" class="form-input" id="smtpPassword" name="smtp_password" placeholder="Your SMTP password" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="fromAddress">From Address *</label>
-                            <input type="email" class="form-input" id="fromAddress" name="from_address" placeholder="e.g., alerts@company.com" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label" for="defaultRecipient">Default Recipient</label>
-                            <input type="email" class="form-input" id="defaultRecipient" name="default_recipient" placeholder="e.g., admin@company.com">
-                        </div>
-                        
-                        <div class="form-checkbox">
-                            <input type="checkbox" id="smtpSsl" name="smtp_ssl" checked>
-                            <label for="smtpSsl">Use SSL/TLS</label>
-                        </div>
-                        
-                        <div class="form-actions">
-                            <button type="submit" class="btn primary">Save Integration</button>
-                            <button type="button" class="btn secondary" onclick="hideAddForm()">Cancel</button>
-                        </div>
-                    </form>
+                    @endif
                 </div>
 
-                <!-- Integrations List -->
-                <div class="integrations-list" id="integrationsList">
-                    <div class="empty-state">
-                        <h3>No email integrations configured</h3>
-                        <p>Add your first email integration to start sending alert notifications.</p>
+                <!-- Email Integration Section -->
+                <div id="emailSection" class="integration-section">
+                    <!-- Email Integration Form -->
+                    <div class="integration-form" id="emailIntegrationForm">
+                        <form action="{{ route('api.elasticsearch.integrations.email.save') }}" method="POST">
+                            @csrf
+                            <div class="form-group">
+                                <label class="form-label" for="emailIntegrationName">Integration Name *</label>
+                                <input type="text" class="form-input" id="emailIntegrationName" name="name" placeholder="e.g., Company SMTP Server" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="smtpHost">SMTP Host *</label>
+                                <input type="text" class="form-input" id="smtpHost" name="smtp_host" placeholder="e.g., smtp.gmail.com" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="smtpPort">SMTP Port *</label>
+                                <input type="number" class="form-input" id="smtpPort" name="smtp_port" placeholder="e.g., 587" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="smtpUsername">SMTP Username *</label>
+                                <input type="text" class="form-input" id="smtpUsername" name="smtp_username" placeholder="e.g., your-email@company.com" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="smtpPassword">SMTP Password *</label>
+                                <input type="password" class="form-input" id="smtpPassword" name="smtp_password" placeholder="Your SMTP password" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="fromAddress">From Address *</label>
+                                <input type="email" class="form-input" id="fromAddress" name="from_address" placeholder="e.g., alerts@company.com" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="defaultRecipient">Default Recipient</label>
+                                <input type="email" class="form-input" id="defaultRecipient" name="default_recipient" placeholder="e.g., admin@company.com">
+                            </div>
+                            
+                            <div class="form-checkbox">
+                                <input type="checkbox" id="smtpSsl" name="smtp_ssl" checked>
+                                <label for="smtpSsl">Use SSL/TLS</label>
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="submit" class="btn primary">Save Integration</button>
+                                <button type="button" class="btn secondary" onclick="hideAddForm()">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Email Integrations List -->
+                    <div class="integrations-list" id="emailIntegrationsList">
+                        @if($emailIntegrations->count() > 0)
+                            @foreach($emailIntegrations as $integration)
+                                <div class="integration-card">
+                                    <div class="integration-card-header">
+                                        <div class="integration-name">{{ $integration->name }}</div>
+                                        <div class="integration-actions">
+                                            <form action="{{ route('api.elasticsearch.integrations.email.test') }}" method="POST" style="display: inline;">
+                                                @csrf
+                                                <input type="hidden" name="name" value="{{ $integration->name }}">
+                                                <button type="submit" class="integration-btn test">
+                                                    <span class="icon icon-test"></span>
+                                                    Test
+                                                </button>
+                                            </form>
+                                            <form action="{{ route('api.elasticsearch.integrations.email.delete') }}" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this integration?')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <input type="hidden" name="name" value="{{ $integration->name }}">
+                                                <button type="submit" class="integration-btn delete">
+                                                    <span class="icon icon-delete"></span>
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    <div class="integration-details">
+                                        <strong>SMTP Host:</strong> {{ $integration->smtp_host }}<br>
+                                        <strong>Port:</strong> {{ $integration->smtp_port }}<br>
+                                        <strong>From:</strong> {{ $integration->from_address }}<br>
+                                        <strong>SSL:</strong> {{ $integration->smtp_ssl ? 'Yes' : 'No' }}<br>
+                                        @if($integration->default_recipient)
+                                            <strong>Default Recipient:</strong> {{ $integration->default_recipient }}<br>
+                                        @endif
+                                        <strong>Created:</strong> {{ $integration->created_at->format('Y-m-d H:i:s') }}
+                                    </div>
+                                </div>
+                            @endforeach
+                        @else
+                            <div class="empty-state">
+                                <h3>No email integrations configured</h3>
+                                <p>Add your first email integration to start sending alert notifications.</p>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+                <!-- Slack Integration Section -->
+                <div id="slackSection" class="integration-section" style="display: none;">
+                    <!-- Slack Integration Form -->
+                    <div class="integration-form" id="slackIntegrationForm">
+                        <form action="{{ route('api.elasticsearch.integrations.slack.save') }}" method="POST">
+                            @csrf
+                            <div class="form-group">
+                                <label class="form-label" for="slackIntegrationName">Integration Name *</label>
+                                <input type="text" class="form-input" id="slackIntegrationName" name="name" placeholder="e.g., Company Slack" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="webhookUrl">Webhook URL *</label>
+                                <input type="url" class="form-input" id="webhookUrl" name="webhook_url" placeholder="https://hooks.slack.com/services/..." required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="channel">Channel</label>
+                                <input type="text" class="form-input" id="channel" name="channel" placeholder="e.g., #alerts">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="username">Bot Username</label>
+                                <input type="text" class="form-input" id="username" name="username" placeholder="e.g., ElastAlert Bot">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="iconEmoji">Icon Emoji</label>
+                                <input type="text" class="form-input" id="iconEmoji" name="icon_emoji" placeholder="e.g., :warning:">
+                            </div>
+                            
+                            <div class="form-actions">
+                                <button type="submit" class="btn primary">Save Integration</button>
+                                <button type="button" class="btn secondary" onclick="hideAddForm()">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Slack Integrations List -->
+                    <div class="integrations-list" id="slackIntegrationsList">
+                        @if($slackIntegrations->count() > 0)
+                            @foreach($slackIntegrations as $integration)
+                                <div class="integration-card">
+                                    <div class="integration-card-header">
+                                        <div class="integration-name">{{ $integration->name }}</div>
+                                        <div class="integration-actions">
+                                            <form action="{{ route('api.elasticsearch.integrations.slack.test') }}" method="POST" style="display: inline;">
+                                                @csrf
+                                                <input type="hidden" name="name" value="{{ $integration->name }}">
+                                                <button type="submit" class="integration-btn test">
+                                                    <span class="icon icon-test"></span>
+                                                    Test
+                                                </button>
+                                            </form>
+                                            <form action="{{ route('api.elasticsearch.integrations.slack.delete') }}" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this integration?')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <input type="hidden" name="name" value="{{ $integration->name }}">
+                                                <button type="submit" class="integration-btn delete">
+                                                    <span class="icon icon-delete"></span>
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    <div class="integration-details">
+                                        <strong>Webhook URL:</strong> {{ substr($integration->webhook_url, 0, 50) }}...<br>
+                                        @if($integration->channel)
+                                            <strong>Channel:</strong> {{ $integration->channel }}<br>
+                                        @endif
+                                        @if($integration->username)
+                                            <strong>Username:</strong> {{ $integration->username }}<br>
+                                        @endif
+                                        @if($integration->icon_emoji)
+                                            <strong>Icon:</strong> {{ $integration->icon_emoji }}<br>
+                                        @endif
+                                        <strong>Created:</strong> {{ $integration->created_at->format('Y-m-d H:i:s') }}
+                                    </div>
+                                </div>
+                            @endforeach
+                        @else
+                            <div class="empty-state">
+                                <h3>No Slack integrations configured</h3>
+                                <p>Add your first Slack integration to start sending alert notifications.</p>
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>
         </div>
 
     <script>
-        // CSRF token setup
-        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        
-        // DOM elements
-        const integrationForm = document.getElementById('integrationForm');
-        const emailIntegrationForm = document.getElementById('emailIntegrationForm');
-        const integrationsList = document.getElementById('integrationsList');
-        const alertContainer = document.getElementById('alertContainer');
+        let currentIntegrationType = 'email';
 
-        // Load integrations on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            loadIntegrations();
-        });
-
-        function showAlert(message, type = 'success') {
-            alertContainer.innerHTML = `<div class="alert ${type}">${message}</div>`;
-            setTimeout(() => {
-                alertContainer.innerHTML = '';
-            }, 5000);
-        }
-
-        function showAddForm() {
-            integrationForm.classList.add('show');
-            emailIntegrationForm.reset();
-        }
-
-        function hideAddForm() {
-            integrationForm.classList.remove('show');
-            emailIntegrationForm.reset();
-        }
-
-        async function loadIntegrations() {
-            try {
-                const response = await fetch('/api/elasticsearch/integrations');
-                const data = await response.json();
-                
-                if (data.success) {
-                    displayIntegrations(data.integrations.email || {});
-                } else {
-                    showAlert('Failed to load integrations', 'error');
-                }
-            } catch (error) {
-                console.error('Error loading integrations:', error);
-                showAlert('Error loading integrations', 'error');
-            }
-        }
-
-        function displayIntegrations(emailIntegrations) {
-            if (Object.keys(emailIntegrations).length === 0) {
-                integrationsList.innerHTML = `
-                    <div class="empty-state">
-                        <h3>No email integrations configured</h3>
-                        <p>Add your first email integration to start sending alert notifications.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            let html = '';
-            Object.values(emailIntegrations).forEach(integration => {
-                html += `
-                    <div class="integration-card">
-                        <div class="integration-card-header">
-                            <div class="integration-name">${integration.name}</div>
-                            <div class="integration-actions">
-                                <button class="integration-btn test" onclick="testIntegration('${integration.name}')">
-                                    <span class="icon icon-test"></span>
-                                    Test
-                                </button>
-                                <button class="integration-btn edit" onclick="editIntegration('${integration.name}')">
-                                    <span class="icon icon-edit"></span>
-                                    Edit
-                                </button>
-                                <button class="integration-btn delete" onclick="deleteIntegration('${integration.name}')">
-                                    <span class="icon icon-delete"></span>
-                                    Delete
-                                </button>
-                            </div>
-                        </div>
-                        <div class="integration-details">
-                            <strong>SMTP Host:</strong> ${integration.smtp_host}<br>
-                            <strong>Port:</strong> ${integration.smtp_port}<br>
-                            <strong>From:</strong> ${integration.from_address}<br>
-                            <strong>SSL:</strong> ${integration.smtp_ssl ? 'Yes' : 'No'}<br>
-                            ${integration.default_recipient ? `<strong>Default Recipient:</strong> ${integration.default_recipient}<br>` : ''}
-                            <strong>Created:</strong> ${new Date(integration.created_at).toLocaleString()}
-                        </div>
-                    </div>
-                `;
+        // Show specific integration type
+        function showIntegrationType(type) {
+            // Hide all sections
+            document.getElementById('emailSection').style.display = 'none';
+            document.getElementById('slackSection').style.display = 'none';
+            
+            // Hide any open forms
+            hideAddForm();
+            
+            // Update sidebar active state
+            document.querySelectorAll('.integration-type').forEach(function(item) {
+                item.classList.remove('active');
             });
+            document.querySelector(`[data-type="${type}"]`).classList.add('active');
             
-            integrationsList.innerHTML = html;
+            // Show selected section
+            if (type === 'slack') {
+                document.getElementById('slackSection').style.display = 'block';
+                document.getElementById('pageTitle').textContent = 'Slack Integrations';
+                currentIntegrationType = 'slack';
+            } else {
+                document.getElementById('emailSection').style.display = 'block';
+                document.getElementById('pageTitle').textContent = 'Email / SMTP Integrations';
+                currentIntegrationType = 'email';
+            }
         }
 
-        // Handle form submission
-        emailIntegrationForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
+        // Show add form for current integration type
+        function showAddForm() {
+            let formId = currentIntegrationType === 'slack' ? 'slackIntegrationForm' : 'emailIntegrationForm';
+            const integrationForm = document.getElementById(formId);
             
-            const formData = new FormData(emailIntegrationForm);
-            const data = Object.fromEntries(formData.entries());
-            data.smtp_ssl = document.getElementById('smtpSsl').checked;
-            
-            try {
-                const response = await fetch('/api/elasticsearch/integrations/email', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken
-                    },
-                    body: JSON.stringify(data)
-                });
+            if (integrationForm) {
+                integrationForm.classList.add('show');
                 
-                const result = await response.json();
-                
-                if (result.success) {
-                    showAlert(result.message, 'success');
-                    hideAddForm();
-                    loadIntegrations();
-                } else {
-                    showAlert(result.error || 'Failed to save integration', 'error');
+                // Reset the form
+                const form = integrationForm.querySelector('form');
+                if (form) {
+                    form.reset();
                 }
-            } catch (error) {
-                console.error('Error saving integration:', error);
-                showAlert('Error saving integration', 'error');
             }
+        }
+
+        // Hide add form for current integration type
+        function hideAddForm() {
+            // Hide both forms
+            const emailForm = document.getElementById('emailIntegrationForm');
+            const slackForm = document.getElementById('slackIntegrationForm');
+            
+            if (emailForm) {
+                emailForm.classList.remove('show');
+                const form = emailForm.querySelector('form');
+                if (form) form.reset();
+            }
+            
+            if (slackForm) {
+                slackForm.classList.remove('show');
+                const form = slackForm.querySelector('form');
+                if (form) form.reset();
+            }
+        }
+
+        // Auto-hide alerts after 5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                setTimeout(function() {
+                    alert.style.opacity = '0';
+                    setTimeout(function() {
+                        alert.remove();
+                    }, 300);
+                }, 5000);
+            });
         });
-
-        async function deleteIntegration(name) {
-            if (!confirm(`Are you sure you want to delete the integration "${name}"?`)) {
-                return;
-            }
-            
-            try {
-                const response = await fetch('/api/elasticsearch/integrations/email', {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken
-                    },
-                    body: JSON.stringify({ name: name })
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showAlert(result.message, 'success');
-                    loadIntegrations();
-                } else {
-                    showAlert(result.error || 'Failed to delete integration', 'error');
-                }
-            } catch (error) {
-                console.error('Error deleting integration:', error);
-                showAlert('Error deleting integration', 'error');
-            }
-        }
-
-        async function testIntegration(name) {
-            try {
-                const response = await fetch('/api/elasticsearch/integrations/email/test', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken
-                    },
-                    body: JSON.stringify({ name: name })
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showAlert(`Integration "${name}" test successful`, 'success');
-                } else {
-                    showAlert(result.error || 'Integration test failed', 'error');
-                }
-            } catch (error) {
-                console.error('Error testing integration:', error);
-                showAlert('Error testing integration', 'error');
-            }
-        }
-
-        function editIntegration(name) {
-            // For now, just show a message. In a full implementation, 
-            // you would populate the form with the integration data
-            showAlert('Edit functionality coming soon. Please delete and recreate for now.', 'error');
-        }
     </script>
 </body>
 </html> 

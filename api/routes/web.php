@@ -47,6 +47,12 @@ Route::delete('/api/elasticsearch/integrations/email', [IntegrationsController::
 Route::post('/api/elasticsearch/integrations/email/test', [IntegrationsController::class, 'testEmailIntegration'])->name('api.elasticsearch.integrations.email.test');
 Route::get('/api/elasticsearch/integrations/email/list', [IntegrationsController::class, 'getEmailIntegrations'])->name('api.elasticsearch.integrations.email.list');
 
+// Slack integration routes
+Route::post('/api/elasticsearch/integrations/slack', [IntegrationsController::class, 'saveSlackIntegration'])->name('api.elasticsearch.integrations.slack.save');
+Route::delete('/api/elasticsearch/integrations/slack', [IntegrationsController::class, 'deleteSlackIntegration'])->name('api.elasticsearch.integrations.slack.delete');
+Route::post('/api/elasticsearch/integrations/slack/test', [IntegrationsController::class, 'testSlackIntegration'])->name('api.elasticsearch.integrations.slack.test');
+Route::get('/api/elasticsearch/integrations/slack/list', [IntegrationsController::class, 'getSlackIntegrations'])->name('api.elasticsearch.integrations.slack.list');
+
 // Review Configuration routes, both GET and POST
 Route::get('/elasticsearch/print-rule', [IntegrationsController::class, 'reviewConf'])->name('elasticsearch.print-rule');
 Route::post('/elasticsearch/print-rule', [IntegrationsController::class, 'reviewConf'])->name('elasticsearch.print-rule.post');

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use App\Models\EmailIntegration;
+use App\Models\SlackIntegration;
 
 class IntegrationsController extends Controller
 {
@@ -26,9 +27,11 @@ class IntegrationsController extends Controller
     {
         try {
             $emailIntegrations = EmailIntegration::all()->keyBy('name');
+            $slackIntegrations = SlackIntegration::all()->keyBy('name');
             
             $integrations = [
-                'email' => $emailIntegrations
+                'email' => $emailIntegrations,
+                'slack' => $slackIntegrations
             ];
 
             return response()->json(['success' => true, 'integrations' => $integrations]);
@@ -279,5 +282,93 @@ class IntegrationsController extends Controller
         $output .= "Generated on: " . now()->format('Y-m-d H:i:s') . "\n";
         
         return response($output, 200)->header('Content-Type', 'text/plain');
+    }
+
+    public function saveSlackIntegration(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'webhook_url' => 'required|url|max:255',
+            'channel' => 'nullable|string|max:255',
+            'username' => 'nullable|string|max:255',
+            'icon_emoji' => 'nullable|string|max:255'
+        ]);
+
+        try {
+            $integration = SlackIntegration::updateOrCreate(
+                ['name' => $request->input('name')],
+                [
+                    'webhook_url' => $request->input('webhook_url'),
+                    'channel' => $request->input('channel'),
+                    'username' => $request->input('username'),
+                    'icon_emoji' => $request->input('icon_emoji')
+                ]
+            );
+
+            Log::info("Slack integration '{$request->input('name')}' saved successfully");
+
+            return redirect()->route('elasticsearch.integrations', ['type' => 'slack'])->with('success', 'Slack integration saved successfully');
+        } catch (\Exception $e) {
+            Log::error('Failed to save Slack integration: ' . $e->getMessage());
+            return redirect()->route('elasticsearch.integrations', ['type' => 'slack'])->with('error', 'Failed to save Slack integration: ' . $e->getMessage());
+        }
+    }
+
+    public function deleteSlackIntegration(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string'
+        ]);
+
+        try {
+            $integration = SlackIntegration::where('name', $request->input('name'))->first();
+            
+            if (!$integration) {
+                return response()->json(['success' => false, 'error' => 'Integration not found'], 404);
+            }
+
+            $integration->delete();
+
+            Log::info("Slack integration '{$request->input('name')}' deleted successfully");
+
+            return redirect()->route('elasticsearch.integrations', ['type' => 'slack'])->with('success', 'Slack integration deleted successfully');
+        } catch (\Exception $e) {
+            Log::error('Failed to delete Slack integration: ' . $e->getMessage());
+            return redirect()->route('elasticsearch.integrations', ['type' => 'slack'])->with('error', 'Failed to delete Slack integration: ' . $e->getMessage());
+        }
+    }
+
+    public function testSlackIntegration(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string'
+        ]);
+
+        try {
+            $integration = SlackIntegration::where('name', $request->input('name'))->first();
+            
+            if (!$integration) {
+                return response()->json(['success' => false, 'error' => 'Integration not found'], 404);
+            }
+
+            Log::info("Testing Slack integration '{$request->input('name')}'");
+
+            return redirect()->route('elasticsearch.integrations', ['type' => 'slack'])->with('success', 'Slack integration test successful');
+        } catch (\Exception $e) {
+            Log::error('Failed to test Slack integration: ' . $e->getMessage());
+            return redirect()->route('elasticsearch.integrations', ['type' => 'slack'])->with('error', 'Failed to test Slack integration: ' . $e->getMessage());
+        }
+    }
+
+    public function getSlackIntegrations()
+    {
+        try {
+            $integrations = SlackIntegration::all(['id', 'name', 'webhook_url', 'channel', 'username', 'icon_emoji']);
+            
+            return response()->json(['success' => true, 'integrations' => $integrations]);
+        } catch (\Exception $e) {
+            Log::error('Failed to get Slack integrations: ' . $e->getMessage());
+            return response()->json(['success' => false, 'error' => 'Failed to get Slack integrations'], 500);
+        }
     }
 } 

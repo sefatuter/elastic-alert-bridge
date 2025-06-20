@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 use App\Models\EmailIntegration;
+use App\Models\SlackIntegration;
 
 class AIController extends Controller 
 {
@@ -192,6 +193,141 @@ class AIController extends Controller
         return $prompt;
     }
 
+    private function prepareSlackPrompt(array $formData): string
+    {
+        // Get form data
+        $ruleName = $formData['rule_name'] ?? 'N/A';
+        $index = $formData['elasticsearch_index'] ?? 'N/A';
+        $scheduleInterval = $formData['schedule_interval'] ?? 'N/A';
+        $scheduleUnit = $formData['schedule_unit'] ?? 'N/A';
+        $alertPrompt = $formData['alert_prompt'] ?? 'N/A';
+        $kqlSyntax = $formData['kql_syntax'] ?? null;
+
+        $prompt = <<<PROMPT
+            Generate a valid and workable ElastAlert rule YAML content based on the following details. 
+            Include everything and do not leave empty space; fill it with what you have been given in a controlled way.
+            -------------------------------------
+            Rule Name: {$ruleName}
+            Index: {$index}
+            Schedule: Check every {$scheduleInterval} {$scheduleUnit}
+
+            Alert Requirements (User Prompt):
+            {$alertPrompt}
+            PROMPT;
+
+        if (!empty($kqlSyntax)) {
+            $prompt .= "\nKQL Syntax (User Provided):\n{$kqlSyntax}";
+        }
+
+        // Prepare variables for the YAML template
+        $webhookUrl = $formData['webhook_url'] ?? 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK';
+        $channel = $formData['channel'] ?? '#alerts';
+        $username = $formData['username'] ?? 'ElastAlert';
+        $iconEmoji = $formData['icon_emoji'] ?? ':warning:';
+        $queryString = $kqlSyntax ?: '*';
+
+                $prompt .= <<<YAML
+
+
+        # ─────────────────────────────────────────────
+        #  EXAMPLE YAML FILE CONTENT
+        # ─────────────────────────────────────────────
+        
+        name: {$ruleName}
+        type: any
+        index: {$index}
+        num_events: 1
+        timeframe:
+          minutes: 5
+        
+        filter:
+          - query_string:
+              query: "{$queryString}"
+        
+        alert:
+          - slack
+        
+        # ── 💬 Slack settings ──────────────────────
+        slack_webhook_url: "{$webhookUrl}"
+        slack_channel_override: "{$channel}"
+        slack_username_override: "{$username}"
+        slack_emoji_override: "{$iconEmoji}"
+        slack_msg_color: "danger"
+        
+        slack_title: "🚨 ElastAlert: {0}"
+        slack_title_args:
+          - rule.name
+        
+        alert_subject: "Alert triggered for rule {0}"
+        alert_subject_args:
+          - rule.name
+        
+        alert_text: |
+          Rule: {0}
+          Index: {1}
+          Events: {2}
+          Time: {3}
+          
+          Details:
+          - Rule Name: {0}
+          - Elasticsearch Index: {1}
+          - Number of Events: {2}
+          - Event Timestamp: {3}
+          
+          Action Required: Check logs and investigate the alert condition.
+        
+        alert_text_args:
+          - rule.name
+          - rule.index
+          - num_matches
+          - '@timestamp'
+        
+        YAML;
+        
+        $prompt .= <<<INFO
+        
+        CRITICAL ELASTALERT SLACK YAML REQUIREMENTS:
+        1. Generate ONLY valid ElastAlert YAML - no explanations, no comments with #
+        2. Use SINGLE curly braces {0}, {1}, {2}, {3} for ALL placeholders - NOT double braces
+        3. All Slack configuration goes at ROOT level - do NOT nest under 'slack:' section
+        4. Use these EXACT field names for Slack:
+           - slack_webhook_url (required)
+           - slack_channel_override (optional)
+           - slack_username_override (optional) 
+           - slack_emoji_override (optional)
+           - slack_msg_color (optional: "danger", "good", "warning")
+           - slack_title (optional)
+           - slack_title_args (optional)
+        5. For message content, use alert_text and alert_text_args (NOT slack_text)
+        6. Use EXACTLY 4 placeholders: {0}, {1}, {2}, {3} in alert_text
+        7. Use EXACTLY 4 items in alert_text_args: rule.name, rule.index, num_matches, '@timestamp'
+        8. Placeholders must match: {0}=rule.name, {1}=rule.index, {2}=num_matches, {3}='@timestamp'
+        9. Keep alert_text simple - avoid complex Slack markdown that may break
+        10. Output pure YAML only - no backticks, no explanations before or after
+        
+        INFO;
+        
+        if ($formData['enable_slack_action']) {
+            $prompt .= <<<SLACK
+        
+        Slack Action Details:
+        Webhook URL: {$webhookUrl}
+        Channel: {$channel}
+        Username: {$username}
+        Icon Emoji: {$iconEmoji}
+        
+        IMPORTANT REMINDERS:
+        - Use single curly braces {0}, {1}, {2}, {3} for placeholders in YAML output
+        - DO NOT use double curly braces {{0}} - ElastAlert requires single braces
+        - Use alert_text and alert_text_args for message content (NOT slack_text)
+        - All Slack config fields go at root level, not nested under 'slack:'
+        
+        SLACK;
+        }
+
+        return $prompt;
+    }
+
     //
     public function generateRule(Request $request)
     {
@@ -205,6 +341,7 @@ class AIController extends Controller
             'schedule_unit' => $request->get('unit', 'minutes'),
             'submitted_at' => now()->toDateTimeString(),
             'enable_email_action' => $request->boolean('enableEmailAction') || $request->get('selectedAction') === 'email',
+            'enable_slack_action' => $request->boolean('enableSlackAction') || $request->get('selectedAction') === 'slack',
         ];
 
         // Handle email configuration based on type
@@ -253,6 +390,45 @@ class AIController extends Controller
             }
         }
 
+        // Handle Slack configuration based on type
+        if ($formData['enable_slack_action']) {
+            $slackType = $request->get('slackType', 'custom');
+            $formData['slack_type'] = $slackType;
+            
+            if ($slackType === 'integration') {
+                // Get Slack configuration from database integration
+                $slackIntegrationId = $request->get('slackIntegrationId');
+                
+                if (empty($slackIntegrationId)) {
+                    return back()->withErrors(['error' => 'Slack Integration ID is required when using Slack integration.'])->withInput();
+                }
+                
+                $slackIntegration = SlackIntegration::find($slackIntegrationId);
+                
+                if (!$slackIntegration) {
+                    return back()->withErrors(['error' => 'Slack integration not found.'])->withInput();
+                }
+                
+                $formData['slack_integration_id'] = $slackIntegrationId;
+                $formData['webhook_url'] = $slackIntegration->webhook_url;
+                $formData['channel'] = $slackIntegration->channel;
+                $formData['username'] = $slackIntegration->username;
+                $formData['icon_emoji'] = $slackIntegration->icon_emoji;
+                $formData['slack_integration_name'] = $slackIntegration->name;
+            } else {
+                // Use custom Slack configuration
+                $formData['webhook_url'] = $request->get('slackWebhookUrl', '');
+                $formData['channel'] = $request->get('slackChannel', '');
+                $formData['username'] = $request->get('slackUsername', '');
+                $formData['icon_emoji'] = $request->get('slackIconEmoji', '');
+            }
+            
+            // Validate webhook URL is provided
+            if (empty($formData['webhook_url'])) {
+                return back()->withErrors(['error' => 'Slack webhook URL is required when Slack action is enabled.'])->withInput();
+            }
+        }
+
         if (empty($formData['rule_name'])) {
             return back()->withErrors(['error' => 'Rule Name is required.'])->withInput();
         }
@@ -260,7 +436,12 @@ class AIController extends Controller
             return back()->withErrors(['error' => 'Alert Requirements (prompt) is required.'])->withInput();
         }
 
-        $geminiPrompt = $this->prepareEmailPrompt($formData);
+        // Determine which prompt to use based on action type
+        if ($formData['enable_slack_action']) {
+            $geminiPrompt = $this->prepareSlackPrompt($formData);
+        } else {
+            $geminiPrompt = $this->prepareEmailPrompt($formData);
+        }
         
         Log::info("Gemini Prompt for rule '{$formData['rule_name']}':\n{$geminiPrompt}");
 
