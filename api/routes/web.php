@@ -34,6 +34,7 @@ Route::get('/api/elasticsearch/rules/content', [RuleController::class, 'getRuleF
 
 // Deploy Controller for ElastAlert control
 Route::get('/api/elastalert/status', [DeployController::class, 'getStatus'])->name('api.elastalert.status');
+Route::get('/api/elastalert/logs', [DeployController::class, 'getLogs'])->name('api.elastalert.logs');
 Route::post('/elastalert/start', [DeployController::class, 'start'])->name('elastalert.start');
 Route::post('/elastalert/stop', [DeployController::class, 'stop'])->name('elastalert.stop');
 Route::post('/elastalert/restart', [DeployController::class, 'restart'])->name('elastalert.restart');

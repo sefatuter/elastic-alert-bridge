@@ -260,4 +260,66 @@ class DeployController extends Controller
         $result = shell_exec("ps -p {$pid} -o pid= 2>/dev/null");
         return !empty(trim($result));
     }
+
+    public function getLogs(Request $request)
+    {
+        try {
+            // Get the number of lines to return (default: 100, max: 1000)
+            $lines = min((int) $request->get('lines', 100), 1000);
+            
+            if (!file_exists($this->logFile)) {
+                return response()->json([
+                    'logs' => '',
+                    'error' => 'Log file not found. ElastAlert may not have been started yet.'
+                ]);
+            }
+
+            // Read the last N lines from the log file
+            $logs = $this->getTailLines($this->logFile, $lines);
+            
+            return response()->json([
+                'logs' => $logs,
+                'timestamp' => time()
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to read ElastAlert logs: ' . $e->getMessage());
+            return response()->json([
+                'logs' => '',
+                'error' => 'Failed to read logs: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function getTailLines($file, $lines)
+    {
+        $handle = fopen($file, 'r');
+        if (!$handle) {
+            return '';
+        }
+
+        $linecounter = $lines;
+        $pos = -2;
+        $beginning = false;
+        $text = array();
+
+        while ($linecounter > 0) {
+            $t = " ";
+            while ($t != "\n") {
+                if (fseek($handle, $pos, SEEK_END) == -1) {
+                    $beginning = true;
+                    break;
+                }
+                $t = fgetc($handle);
+                $pos--;
+            }
+            $linecounter--;
+            if ($beginning) {
+                rewind($handle);
+            }
+            $text[$lines - $linecounter - 1] = fgets($handle);
+            if ($beginning) break;
+        }
+        fclose($handle);
+        return implode("", array_reverse($text));
+    }
 }

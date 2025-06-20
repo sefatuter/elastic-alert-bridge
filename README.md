@@ -16,18 +16,59 @@ elastic-alert-bridge/
 
 ## Getting Started
 
-### Prerequisites
-
-- Docker & Docker Compose
-- Git
-
-### Installation
-
 1. Clone the repository
    ```bash
    git clone https://github.com/sefatuter/elastic-alert-bridge.git
    cd elastic-alert-bridge
    ```
+
+
+2. Install PHP and Required Extensions
+   ```bash
+   sudo apt update
+   sudo add-apt-repository ppa:ondrej/php
+   sudo apt install php8.2 php8.2-cli php8.2-common php8.2-mbstring php8.2-xml php8.2-curl php8.2-mysql php8.2-bcmath php8.2-zip php8.2-gd php8.2-readline unzip -y
+
+   ```
+
+3. Install Composer
+   ```bash
+   cd ~
+   curl -sS https://getcomposer.org/installer -o composer-setup.php
+   sudo php composer-setup.php --install-dir=/usr/local/bin --filename=composer
+   composer --version
+   ```
+
+4. Install dependencies
+   ```bash
+   cd elastic-alert-bridge/api/
+   composer install
+   ```
+
+### Prerequisites
+
+- Docker & Docker Compose (Later)
+- Git (Later)
+
+- Elasticsearch installation
+  ```bash
+  curl -fsSL https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo gpg --dearmor -o /usr/share/keyrings/elastic.gpg
+  echo "deb [signed-by=/usr/share/keyrings/elastic.gpg] https://artifacts.elastic.co/packages/7.x/apt stable main" | sudo -a /etc/apt/sources.list.d/elastic-7.x.list
+  sudo apt update
+
+  sudo apt install elasticsearch
+  sudo systemctl start elasticsearch
+  sudo systemctl enable elasticsearch
+
+  curl -X GET 'http://localhost:9200'
+  ```
+- Copy the elasticsearch.yml file
+  ```bash
+  sudo cp elastic-alert-bridge/api/storage/app/elastalert2/elasticsearch.yml /etc/elasticsearch/
+  sudo systemctl restart elasticsearch
+  ```
+
+### 
 
 2. Start the containers
    ```bash

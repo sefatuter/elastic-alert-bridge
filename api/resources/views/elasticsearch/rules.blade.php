@@ -218,6 +218,99 @@
             white-space: pre-wrap;
             word-wrap: break-word;
         }
+        .control-middle {
+            flex-grow: 2;
+            padding: 0 24px;
+        }
+        .logs-section {
+            background: #f7f9fb;
+            border: 1px solid #d3dae6;
+            border-radius: 6px;
+            height: 120px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            min-height: 80px;
+            max-height: 400px;
+        }
+        .logs-header {
+            background: #ffffff;
+            border-bottom: 1px solid #d3dae6;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: between;
+            border-radius: 6px 6px 0 0;
+        }
+        .logs-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #343741;
+            flex-grow: 1;
+        }
+        .logs-content {
+            flex-grow: 1;
+            padding: 8px 12px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 11px;
+            line-height: 1.3;
+            background: #fafbfc;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #343741;
+        }
+        .logs-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .logs-auto-refresh {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+        }
+        .logs-clear {
+            background: #dc3545;
+            color: #ffffff;
+            border: none;
+            border-radius: 3px;
+            padding: 4px 8px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .logs-clear:hover {
+            background: #c82333;
+        }
+        .logs-resize-handle {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: transparent;
+            cursor: ns-resize;
+            border-radius: 0 0 6px 6px;
+        }
+        .logs-resize-handle:hover {
+            background: #006bb4;
+            opacity: 0.3;
+        }
+        .logs-resize-handle::after {
+            content: '';
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 2px;
+            background: #d3dae6;
+            border-radius: 1px;
+        }
+        .logs-resize-handle:hover::after {
+            background: #006bb4;
+        }
     </style>
 </head>
 <body>
@@ -246,6 +339,21 @@
                     @csrf
                     <button type="submit" class="control-btn restart-btn">Restart</button>
                 </form>
+            </div>
+        </div>
+        <div class="control-middle">
+            <div class="logs-section">
+                <div class="logs-header">
+                    <span class="logs-title">ElastAlert Logs</span>
+                    <div class="logs-controls">
+                        <label class="logs-auto-refresh">
+                            <input type="checkbox" id="autoRefreshLogs" checked> Auto-refresh
+                        </label>
+                        <button class="logs-clear" onclick="clearLogs()">Clear</button>
+                    </div>
+                </div>
+                <div class="logs-content" id="logsContent">Loading logs...</div>
+                <div class="logs-resize-handle" id="logsResizeHandle"></div>
             </div>
         </div>
         <div class="control-right">
@@ -281,6 +389,8 @@
             <pre id="ruleContentDisplay"><p class="no-rule-selected">Select a rule file from the left to view its content.</p></pre>
         </div>
     </div>
+
+
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -437,6 +547,96 @@
             
             // Check status every 30 seconds
             setInterval(updateStatus, 30000);
+
+            // Logs functionality
+            let logsInterval = null;
+
+            window.clearLogs = function() {
+                document.getElementById('logsContent').textContent = '';
+            };
+
+            function loadLogs() {
+                const logsContent = document.getElementById('logsContent');
+                
+                fetch('{{ route("api.elastalert.logs") }}?lines=50')
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.error) {
+                            logsContent.textContent = `Error: ${data.error}`;
+                        } else if (data.logs) {
+                            logsContent.textContent = data.logs;
+                            // Auto-scroll to bottom
+                            logsContent.scrollTop = logsContent.scrollHeight;
+                        } else {
+                            logsContent.textContent = 'No logs available';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Failed to load logs:', error);
+                        logsContent.textContent = `Failed to load logs: ${error.message}`;
+                    });
+            }
+
+            function startAutoRefresh() {
+                const autoRefreshCheckbox = document.getElementById('autoRefreshLogs');
+                
+                if (logsInterval) {
+                    clearInterval(logsInterval);
+                }
+                
+                if (autoRefreshCheckbox.checked) {
+                    logsInterval = setInterval(loadLogs, 5000); // Refresh every 5 seconds
+                }
+            }
+
+            // Handle auto-refresh checkbox change
+            document.getElementById('autoRefreshLogs').addEventListener('change', function() {
+                startAutoRefresh();
+            });
+
+            // Load logs on page load
+            loadLogs();
+            startAutoRefresh();
+
+            // Resize functionality
+            let isResizing = false;
+            let startY = 0;
+            let startHeight = 0;
+
+            const logsSection = document.querySelector('.logs-section');
+            const resizeHandle = document.getElementById('logsResizeHandle');
+
+            resizeHandle.addEventListener('mousedown', function(e) {
+                isResizing = true;
+                startY = e.clientY;
+                startHeight = parseInt(window.getComputedStyle(logsSection).height, 10);
+                document.addEventListener('mousemove', handleResize);
+                document.addEventListener('mouseup', stopResize);
+                e.preventDefault();
+            });
+
+            function handleResize(e) {
+                if (!isResizing) return;
+                
+                const height = startHeight + (e.clientY - startY);
+                const minHeight = 80;
+                const maxHeight = 400;
+                
+                if (height >= minHeight && height <= maxHeight) {
+                    logsSection.style.height = height + 'px';
+                }
+            }
+
+            function stopResize() {
+                isResizing = false;
+                document.removeEventListener('mousemove', handleResize);
+                document.removeEventListener('mouseup', stopResize);
+            }
         });
     </script>
 </body>
