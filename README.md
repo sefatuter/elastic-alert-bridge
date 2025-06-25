@@ -1,5 +1,17 @@
 # Elastic Alert Bridge (EAB)
 
+![image](https://github.com/user-attachments/assets/46e7cfce-ff87-4de3-b629-e2e95e5d8f3c)
+
+![image](https://github.com/user-attachments/assets/0f2c2d9f-51a7-454b-9972-0e38f3447bf3)
+
+![image](https://github.com/user-attachments/assets/1b561e3b-2fbc-48ea-a3d2-7fd513b4a38b)
+
+![image](https://github.com/user-attachments/assets/85734fc7-20fe-4096-b02b-c40f501ced06)
+
+![image](https://github.com/user-attachments/assets/11a408ef-6148-4e76-88ba-2dd227ca24c8)
+
+
+
 ## What This Project Does
 
 ## Project Structure
